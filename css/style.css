@@ -1,0 +1,3599 @@
+/* ====================================================================
+   OPENLAYERS MAP — MASTER UI STYLESHEET
+   Stable Control Positions + Compact Panels
+   ==================================================================== */
+
+
+/* ====================================================================
+   1. DESIGN TOKENS
+   ==================================================================== */
+
+:root {
+
+    --ui-accent: #1f6feb;
+    --ui-accent-dark: #1657b0;
+    --ui-accent-soft: rgba(31, 111, 235, 0.12);
+
+    --ui-bg: #ffffff;
+    --ui-bg-subtle: #f5f7fa;
+    --ui-bg-hover: #eef1f5;
+    --ui-bg-active: #e6ecf5;
+
+    --ui-border: #d7dce3;
+    --ui-border-soft: #e9edf2;
+    --ui-border-strong: #aeb6c2;
+
+    --ui-text: #1d2430;
+    --ui-text-muted: #5b6472;
+    --ui-text-faint: #8b93a1;
+
+    --ui-success: #16a34a;
+    --ui-warning: #d97706;
+    --ui-danger: #dc2626;
+
+    --ui-radius: 10px;
+    --ui-radius-sm: 7px;
+
+    --ui-shadow:
+        0 4px 18px rgba(16, 24, 40, 0.18);
+
+    --ui-shadow-sm:
+        0 1px 4px rgba(16, 24, 40, 0.16);
+
+    --ui-font:
+        "Segoe UI",
+        "Inter",
+        Roboto,
+        system-ui,
+        -apple-system,
+        "Helvetica Neue",
+        Arial,
+        sans-serif;
+
+    --ui-mono:
+        "SF Mono",
+        "Roboto Mono",
+        "Consolas",
+        Menlo,
+        monospace;
+
+
+    /* ---------------------------------------------------------------
+       CONTROL GEOMETRY
+       --------------------------------------------------------------- */
+
+    --edge: 12px;
+
+    --main-btn: 40px;
+
+    --panel-gap: 8px;
+
+
+    /* ---------------------------------------------------------------
+       CONTROL POSITIONS
+       --------------------------------------------------------------- */
+
+    --zoom-top: 12px;
+    --measure-top: 132px;
+    --location-top: 184px;
+    --style-top: 236px;
+    --search-top: 288px;
+
+
+    /* ---------------------------------------------------------------
+       Z-INDEX
+       --------------------------------------------------------------- */
+
+    --z-geolocate: 16000;
+    --z-north: 16500;
+    --z-layer-switcher: 16990;
+    --z-styleditor: 17000;
+    --z-search: 17001;
+    --z-coords: 17000;
+    --z-measure: 18000;
+    --z-popup: 20000;
+}
+
+
+/* ====================================================================
+   2. BASE LAYOUT
+   ==================================================================== */
+
+html,
+body {
+
+    margin: 0;
+    padding: 0;
+
+    width: 100%;
+    height: 100%;
+
+    font-family: var(--ui-font);
+
+    color: var(--ui-text);
+
+    background: #dfe4ea;
+
+    overflow: hidden;
+}
+
+
+#map {
+
+    position: absolute;
+
+    inset: 0;
+
+    width: 100%;
+    height: 100%;
+}
+
+
+#map,
+.ol-viewport,
+.ol-unselectable {
+
+    -webkit-tap-highlight-color: transparent;
+}
+
+
+.ol-viewport {
+
+    background: #e9edf2;
+}
+
+
+/* ====================================================================
+   3. OPENLAYERS GENERAL UI
+   ==================================================================== */
+
+.ol-control {
+
+    background: transparent !important;
+
+    padding: 0 !important;
+}
+
+
+/*
+   IMPORTANT:
+   Do NOT globally set width/height on every button.
+   Main controls are controlled individually below.
+*/
+
+.ol-control a,
+.ol-control button {
+
+    background: var(--ui-bg) !important;
+
+    color: var(--ui-text) !important;
+
+    border: 1px solid var(--ui-border) !important;
+
+    border-radius: var(--ui-radius-sm) !important;
+
+    box-shadow: var(--ui-shadow-sm) !important;
+
+    cursor: pointer !important;
+
+    box-sizing: border-box !important;
+
+    transition:
+        background .15s ease,
+        border-color .15s ease !important;
+}
+
+
+.ol-control a:hover,
+.ol-control button:hover {
+
+    background: var(--ui-bg-hover) !important;
+
+    border-color: var(--ui-accent) !important;
+}
+
+
+/* ====================================================================
+   4. GENERIC UI BUTTON
+   ==================================================================== */
+
+.ui-btn {
+
+    display: inline-flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+    gap: 6px;
+
+    padding: 9px 14px;
+
+    border: 1px solid var(--ui-border);
+
+    border-radius: var(--ui-radius-sm);
+
+    background: var(--ui-bg);
+
+    color: var(--ui-text);
+
+    font-family: var(--ui-font);
+
+    font-size: 13px;
+
+    font-weight: 600;
+
+    line-height: 1;
+
+    cursor: pointer;
+
+    box-sizing: border-box;
+
+    user-select: none;
+
+    transition:
+        background .15s ease,
+        border-color .15s ease,
+        transform .06s ease;
+}
+
+
+.ui-btn:hover {
+
+    background: var(--ui-bg-hover);
+
+    border-color: var(--ui-border-strong);
+}
+
+
+.ui-btn:active {
+
+    transform: translateY(1px);
+}
+
+
+.ui-btn--primary {
+
+    background: var(--ui-accent);
+
+    border-color: var(--ui-accent);
+
+    color: #fff;
+}
+
+
+.ui-btn--primary:hover {
+
+    background: var(--ui-accent-dark);
+}
+
+
+/* ====================================================================
+   5. NORTH ARROW — TOP RIGHT
+   ==================================================================== */
+
+.stage15-north-symbol {
+
+    position: fixed !important;
+
+    top: var(--edge) !important;
+    right: var(--edge) !important;
+
+    width: 56px !important;
+    height: 56px !important;
+
+    margin: 0 !important;
+    padding: 0 !important;
+
+    z-index: var(--z-north) !important;
+
+    display: flex;
+
+    align-items: center;
+    justify-content: center;
+
+    box-sizing: border-box;
+
+    background: var(--ui-bg);
+
+    border: 1px solid var(--ui-border);
+
+    border-radius: 50%;
+
+    box-shadow: var(--ui-shadow-sm);
+
+    cursor: pointer;
+
+    pointer-events: auto;
+
+    transition:
+        transform .2s ease,
+        background .15s ease;
+}
+
+
+.stage15-north-symbol:hover {
+
+    background: var(--ui-bg-hover);
+}
+
+
+.stage15-north-arrow {
+
+    position: relative;
+
+    width: 38px;
+    height: 44px;
+
+    display: flex;
+
+    align-items: center;
+    justify-content: center;
+}
+
+
+.stage15-north-letter {
+
+    position: absolute;
+
+    top: -2px;
+    left: 50%;
+
+    transform: translateX(-50%);
+
+    font-size: 18px;
+
+    font-weight: 800;
+
+    color: var(--ui-accent);
+
+    line-height: 1;
+}
+
+
+.stage15-arrow-head {
+
+    position: absolute;
+
+    top: 15px;
+    left: 50%;
+
+    transform:
+        translateX(-50%)
+        rotate(0deg);
+
+    width: 0;
+    height: 0;
+
+    border-left: 8px solid transparent;
+    border-right: 8px solid transparent;
+
+    border-bottom: 16px solid var(--ui-danger);
+}
+
+
+.stage15-arrow-line {
+
+    position: absolute;
+
+    top: 28px;
+    left: 50%;
+
+    transform: translateX(-50%);
+
+    width: 4px;
+    height: 13px;
+
+    background: var(--ui-danger);
+
+    border-radius: 3px;
+}
+
+
+.stage15-north-symbol svg,
+.stage15-north-symbol img {
+
+    width: 34px;
+    height: 34px;
+}
+
+
+/* ====================================================================
+   6. LAYER SWITCHER — TOP RIGHT
+   ==================================================================== */
+
+.layer-switcher {
+
+    position: fixed !important;
+
+    top:
+        calc(
+            var(--edge) + 56px + 10px
+        ) !important;
+
+    right: var(--edge) !important;
+
+    left: auto !important;
+
+    width: 48px !important;
+    height: 48px !important;
+
+    max-width: none !important;
+    max-height: none !important;
+
+    margin: 0 !important;
+    padding: 0 !important;
+
+    z-index: var(--z-layer-switcher) !important;
+
+    background: transparent !important;
+
+    border: none !important;
+
+    box-shadow: none !important;
+
+    display: block !important;
+
+    overflow: visible !important;
+
+    font-family: var(--ui-font);
+}
+
+
+/* ====================================================================
+   LAYER SWITCHER BUTTON
+   ==================================================================== */
+
+.layer-switcher-header {
+
+    position: relative !important;
+
+    top: 0 !important;
+    left: 0 !important;
+
+    width: 48px !important;
+    height: 48px !important;
+
+    min-width: 48px !important;
+    min-height: 48px !important;
+
+    margin: 0 !important;
+    padding: 0 !important;
+
+    display: flex;
+
+    align-items: center;
+    justify-content: center;
+
+    box-sizing: border-box;
+
+    background: var(--ui-bg);
+
+    border: 1px solid var(--ui-border);
+
+    border-radius: 50%;
+
+    box-shadow: var(--ui-shadow-sm);
+
+    cursor: pointer;
+
+    user-select: none;
+
+    transition:
+        background .15s ease,
+        transform .15s ease,
+        box-shadow .15s ease;
+}
+
+
+.layer-switcher-header:hover {
+
+    background: var(--ui-bg-hover);
+
+    transform: scale(1.05);
+
+    box-shadow: var(--ui-shadow);
+}
+
+
+.layer-switcher-header:active {
+
+    transform: scale(.95);
+}
+
+
+/* ====================================================================
+   LAYER ICON
+   ==================================================================== */
+
+.layer-switcher-title {
+
+    width: 100%;
+    height: 100%;
+
+    display: flex;
+
+    align-items: center;
+    justify-content: center;
+
+    font-size: 0;
+}
+
+
+.layer-switcher-title::before {
+
+    content: "";
+
+    width: 27px;
+    height: 27px;
+
+    display: block;
+
+    background:
+        url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23555555' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 2 3 7l9 5 9-5-9-5z'/%3E%3Cpath d='m3 12 9 5 9-5'/%3E%3Cpath d='m3 17 9 5 9-5'/%3E%3C/svg%3E")
+        center / contain no-repeat;
+}
+
+
+.layer-switcher-toggle {
+
+    display: none !important;
+}
+
+
+/* ====================================================================
+   LAYER CONTENT
+   ==================================================================== */
+
+#layer-switcher-content {
+
+    position: absolute;
+
+    top: 58px;
+    right: 0;
+
+    width: 244px;
+
+    max-width:
+        calc(
+            100vw - (var(--edge) * 2)
+        );
+
+    max-height:
+        calc(100vh - 120px);
+
+    overflow-y: auto;
+
+    padding: 10px 11px 12px;
+
+    background: var(--ui-bg);
+
+    border: 1px solid var(--ui-border);
+
+    border-radius: var(--ui-radius);
+
+    box-shadow: var(--ui-shadow);
+
+    display: none;
+
+    box-sizing: border-box;
+}
+
+
+.layer-switcher.open #layer-switcher-content {
+
+    display: block;
+}
+
+
+/* ====================================================================
+   LAYER SECTION TITLE
+   ==================================================================== */
+
+.layer-section-title {
+
+    display: flex;
+
+    align-items: center;
+
+    gap: 5px;
+
+    font-size: 11px;
+
+    font-weight: 700;
+
+    text-transform: uppercase;
+
+    letter-spacing: .7px;
+
+    color: var(--ui-text-muted);
+
+    padding: 3px 1px;
+}
+
+
+.layer-section-title::before {
+
+    content: "";
+
+    width: 7px;
+    height: 7px;
+
+    border-radius: 2px;
+
+    background: var(--ui-accent);
+}
+
+
+.layer-divider {
+
+    height: 1px;
+
+    background: var(--ui-border-soft);
+
+    margin: 10px 0;
+}
+
+
+/* ====================================================================
+   BASE MAPS
+   ==================================================================== */
+
+#base-layers .layer-item {
+
+    display: flex;
+
+    align-items: center;
+
+    gap: 8px;
+
+    padding: 7px 8px;
+
+    margin-bottom: 5px;
+
+    border: 1px solid var(--ui-border-soft);
+
+    border-radius: var(--ui-radius-sm);
+
+    background: var(--ui-bg-subtle);
+
+    cursor: pointer;
+
+    font-size: 12px;
+
+    transition:
+        background .15s ease,
+        border-color .15s ease;
+}
+
+
+#base-layers .layer-item:hover {
+
+    background: var(--ui-bg-hover);
+
+    border-color: var(--ui-border);
+}
+
+
+/* ====================================================================
+   BASE MAP RADIO
+   ==================================================================== */
+
+#base-layers .layer-item input[type="radio"] {
+
+    appearance: none;
+
+    width: 15px;
+    height: 15px;
+
+    flex: 0 0 auto;
+
+    border: 2px solid var(--ui-border-strong);
+
+    border-radius: 50%;
+
+    cursor: pointer;
+
+    position: relative;
+}
+
+
+#base-layers .layer-item input[type="radio"]:checked {
+
+    border-color: var(--ui-accent);
+}
+
+
+#base-layers .layer-item input[type="radio"]:checked::after {
+
+    content: "";
+
+    position: absolute;
+
+    inset: 3px;
+
+    border-radius: 50%;
+
+    background: var(--ui-accent);
+}
+
+
+/* ====================================================================
+   VECTOR LAYERS
+   ==================================================================== */
+
+#vector-layers {
+
+    display: flex;
+
+    flex-direction: column;
+
+    gap: 5px;
+}
+
+
+/* ====================================================================
+   LAYER ROW
+   ==================================================================== */
+
+.layer-manager-row {
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: space-between;
+
+    gap: 6px;
+
+    padding: 6px 8px;
+
+    border: 1px solid var(--ui-border-soft);
+
+    border-radius: var(--ui-radius-sm);
+
+    background: var(--ui-bg-subtle);
+
+    transition:
+        background .15s ease,
+        border-color .15s ease;
+}
+
+
+.layer-manager-row:hover {
+
+    background: var(--ui-bg-hover);
+
+    border-color: var(--ui-border);
+}
+
+
+.layer-name-section {
+
+    display: flex;
+
+    align-items: center;
+
+    gap: 7px;
+
+    min-width: 0;
+}
+
+
+/* ====================================================================
+   LAYER CHECKBOX
+   ==================================================================== */
+
+.layer-name-section input[type="checkbox"] {
+
+    appearance: none;
+
+    width: 15px;
+    height: 15px;
+
+    flex: 0 0 auto;
+
+    border: 2px solid var(--ui-border-strong);
+
+    border-radius: 4px;
+
+    cursor: pointer;
+
+    position: relative;
+}
+
+
+.layer-name-section input[type="checkbox"]:checked {
+
+    background: var(--ui-accent);
+
+    border-color: var(--ui-accent);
+}
+
+
+.layer-name-section input[type="checkbox"]:checked::after {
+
+    content: "";
+
+    position: absolute;
+
+    left: 3px;
+    top: 0;
+
+    width: 4px;
+    height: 7px;
+
+    border: solid #fff;
+
+    border-width: 0 2px 2px 0;
+
+    transform: rotate(45deg);
+}
+
+
+.layer-name {
+
+    font-size: 12px;
+
+    font-weight: 500;
+
+    white-space: nowrap;
+
+    overflow: hidden;
+
+    text-overflow: ellipsis;
+}
+
+
+/* ====================================================================
+   LAYER ACTION BUTTONS
+   ==================================================================== */
+
+.layer-buttons {
+
+    display: flex;
+
+    gap: 3px;
+
+    flex: 0 0 auto;
+}
+
+
+.layer-button {
+
+    width: 23px !important;
+    height: 23px !important;
+
+    min-width: 23px !important;
+    min-height: 23px !important;
+
+    display: inline-flex;
+
+    align-items: center;
+    justify-content: center;
+
+    padding: 0 !important;
+
+    border: 1px solid var(--ui-border);
+
+    border-radius: 5px;
+
+    background: var(--ui-bg);
+
+    font-size: 12px;
+
+    line-height: 1;
+
+    cursor: pointer;
+
+    transition:
+        background .13s ease,
+        border-color .13s ease;
+}
+
+
+.layer-button:hover {
+
+    background: var(--ui-bg-active);
+
+    border-color: var(--ui-accent);
+}
+
+
+/* ====================================================================
+   7. LEFT CONTROL RAIL
+   ==================================================================== */
+
+
+/* --------------------------------------------------------------------
+   ZOOM
+   -------------------------------------------------------------------- */
+
+.ol-zoom {
+
+    position: fixed !important;
+
+    top: var(--zoom-top) !important;
+    left: var(--edge) !important;
+
+    right: auto !important;
+    bottom: auto !important;
+
+    width: var(--main-btn) !important;
+
+    margin: 0 !important;
+    padding: 0 !important;
+
+    z-index: 16000 !important;
+
+    background: transparent !important;
+
+    border-radius: var(--ui-radius-sm) !important;
+
+    overflow: hidden;
+
+    box-shadow: var(--ui-shadow-sm);
+
+    box-sizing: border-box !important;
+}
+
+
+.ol-zoom button {
+
+    position: relative !important;
+
+    display: block !important;
+
+    width: var(--main-btn) !important;
+    min-width: var(--main-btn) !important;
+
+    height: var(--main-btn) !important;
+    min-height: var(--main-btn) !important;
+
+    margin: 0 !important;
+    padding: 0 !important;
+
+    box-sizing: border-box !important;
+
+    background: var(--ui-bg) !important;
+
+    color: var(--ui-text) !important;
+
+    border: 1px solid var(--ui-border) !important;
+
+    border-radius: 0 !important;
+
+    font-size: 20px !important;
+
+    font-weight: 700 !important;
+
+    line-height: 1 !important;
+
+    white-space: normal !important;
+}
+
+
+.ol-zoom button + button {
+
+    border-top: none !important;
+}
+
+
+.ol-zoom button:first-child {
+
+    border-top-left-radius: var(--ui-radius-sm) !important;
+
+    border-top-right-radius: var(--ui-radius-sm) !important;
+}
+
+
+.ol-zoom button:last-child {
+
+    border-bottom-left-radius: var(--ui-radius-sm) !important;
+
+    border-bottom-right-radius: var(--ui-radius-sm) !important;
+}
+
+
+.ol-zoom button:hover {
+
+    background: var(--ui-bg-hover) !important;
+
+    border-color: var(--ui-accent) !important;
+}
+
+
+/* ====================================================================
+   MEASURE BUTTON
+   ==================================================================== */
+
+#stage14-control {
+
+    position: fixed !important;
+
+    top: var(--measure-top) !important;
+
+    left: var(--edge) !important;
+
+    right: auto !important;
+    bottom: auto !important;
+
+    width: var(--main-btn) !important;
+    height: var(--main-btn) !important;
+
+    margin: 0 !important;
+    padding: 0 !important;
+
+    z-index: var(--z-measure) !important;
+
+    background: transparent !important;
+
+    box-sizing: border-box !important;
+}
+
+
+#stage14-measure-button {
+
+    position: relative !important;
+
+    top: 0 !important;
+    left: 0 !important;
+
+    width: var(--main-btn) !important;
+    min-width: var(--main-btn) !important;
+
+    height: var(--main-btn) !important;
+    min-height: var(--main-btn) !important;
+
+    margin: 0 !important;
+    padding: 0 !important;
+
+    box-sizing: border-box !important;
+
+    border: 1px solid var(--ui-border) !important;
+
+    border-radius: var(--ui-radius-sm) !important;
+
+    background: var(--ui-bg) !important;
+
+    box-shadow: var(--ui-shadow-sm) !important;
+
+    font-size: 20px !important;
+
+    cursor: pointer !important;
+
+    display: inline-flex !important;
+
+    align-items: center !important;
+
+    justify-content: center !important;
+
+    white-space: normal !important;
+
+    transition:
+        background .15s ease,
+        border-color .15s ease !important;
+}
+
+
+#stage14-measure-button:hover {
+
+    background: var(--ui-bg-hover) !important;
+
+    border-color: var(--ui-accent) !important;
+}
+
+
+#stage14-measure-button.active {
+
+    background: var(--ui-accent) !important;
+
+    border-color: var(--ui-accent) !important;
+
+    color: #fff !important;
+}
+
+
+/* ====================================================================
+   MEASURE PANEL
+   ==================================================================== */
+
+#stage14-panel {
+
+    position: fixed !important;
+
+    top: var(--measure-top) !important;
+
+    left:
+        calc(
+            var(--edge) +
+            var(--main-btn) +
+            var(--panel-gap)
+        ) !important;
+
+    right: auto !important;
+    bottom: auto !important;
+
+    width: 290px !important;
+
+    max-width:
+        calc(100vw - 120px) !important;
+
+    max-height:
+        calc(100vh - 160px) !important;
+
+    overflow-y: auto !important;
+
+    z-index: var(--z-measure) !important;
+
+    background: var(--ui-bg) !important;
+
+    border: 1px solid var(--ui-border) !important;
+
+    border-radius: var(--ui-radius) !important;
+
+    box-shadow: var(--ui-shadow) !important;
+
+    font-family: var(--ui-font) !important;
+
+    font-size: 13px !important;
+
+    color: var(--ui-text) !important;
+
+    box-sizing: border-box !important;
+}
+
+
+/* ====================================================================
+   LOCATION BUTTON
+   ==================================================================== */
+
+.ol-control.geolocate {
+
+    position: fixed !important;
+
+    top: var(--location-top) !important;
+
+    left: var(--edge) !important;
+
+    right: auto !important;
+    bottom: auto !important;
+
+    width: var(--main-btn) !important;
+    height: var(--main-btn) !important;
+
+    margin: 0 !important;
+    padding: 0 !important;
+
+    z-index: var(--z-geolocate) !important;
+
+    box-sizing: border-box !important;
+}
+
+
+.geolocate-button {
+
+    position: relative !important;
+
+    top: 0 !important;
+    left: 0 !important;
+
+    width: var(--main-btn) !important;
+    min-width: var(--main-btn) !important;
+
+    height: var(--main-btn) !important;
+    min-height: var(--main-btn) !important;
+
+    margin: 0 !important;
+    padding: 0 !important;
+
+    border: 1px solid var(--ui-border) !important;
+
+    border-radius: var(--ui-radius-sm) !important;
+
+    background: var(--ui-bg) !important;
+
+    box-shadow: var(--ui-shadow-sm) !important;
+
+    cursor: pointer !important;
+
+    display: inline-flex !important;
+
+    align-items: center !important;
+
+    justify-content: center !important;
+
+    box-sizing: border-box !important;
+
+    white-space: normal !important;
+
+    transition:
+        background .15s ease,
+        border-color .15s ease !important;
+}
+
+
+.geolocate-button:hover {
+
+    background: var(--ui-bg-hover) !important;
+
+    border-color: var(--ui-accent) !important;
+}
+
+
+.geolocate-button::before {
+
+    content: "";
+
+    width: 24px;
+    height: 24px;
+
+    background:
+        url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%231f6feb' stroke-width='2.2' stroke-linecap='round'%3E%3Ccircle cx='12' cy='12' r='7'/%3E%3Cpath d='M12 1v4M12 19v4M1 12h4M19 12h4'/%3E%3Ccircle cx='12' cy='12' r='1.6' fill='%231f6feb' stroke='none'/%3E%3C/svg%3E")
+        center / contain no-repeat;
+}
+
+
+/* ====================================================================
+   STYLE EDITOR BUTTON
+   ==================================================================== */
+
+
+/*
+   VERSION A:
+   If your JavaScript creates .dynamic-style-control
+*/
+
+.dynamic-style-control {
+
+    position: fixed !important;
+
+    top: var(--style-top) !important;
+
+    left: var(--edge) !important;
+
+    right: auto !important;
+    bottom: auto !important;
+
+    width: var(--main-btn) !important;
+    height: var(--main-btn) !important;
+
+    margin: 0 !important;
+    padding: 0 !important;
+
+    z-index: var(--z-styleditor) !important;
+
+    box-sizing: border-box !important;
+
+    background: transparent !important;
+}
+
+
+.dynamic-style-control > button {
+
+    position: relative !important;
+
+    top: 0 !important;
+    left: 0 !important;
+
+    width: var(--main-btn) !important;
+    min-width: var(--main-btn) !important;
+
+    height: var(--main-btn) !important;
+    min-height: var(--main-btn) !important;
+
+    margin: 0 !important;
+    padding: 0 !important;
+
+    box-sizing: border-box !important;
+
+    border: 1px solid var(--ui-border) !important;
+
+    border-radius: var(--ui-radius-sm) !important;
+
+    background: var(--ui-bg) !important;
+
+    color: var(--ui-text) !important;
+
+    box-shadow: var(--ui-shadow-sm) !important;
+
+    cursor: pointer !important;
+
+    display: inline-flex !important;
+
+    align-items: center !important;
+
+    justify-content: center !important;
+
+    white-space: normal !important;
+
+    font-size: 18px !important;
+}
+
+
+.dynamic-style-control > button:hover {
+
+    background: var(--ui-bg-hover) !important;
+
+    border-color: var(--ui-accent) !important;
+}
+
+
+/*
+   VERSION B:
+   If your JavaScript creates #dynamic-style-open-button directly.
+   
+   This keeps it in the SAME left control rail position.
+*/
+
+#dynamic-style-open-button {
+
+    position: fixed !important;
+
+    top: var(--style-top) !important;
+
+    left: var(--edge) !important;
+
+    right: auto !important;
+    bottom: auto !important;
+
+    width: var(--main-btn) !important;
+    min-width: var(--main-btn) !important;
+
+    height: var(--main-btn) !important;
+    min-height: var(--main-btn) !important;
+
+    margin: 0 !important;
+    padding: 0 !important;
+
+    z-index: var(--z-styleditor) !important;
+
+    box-sizing: border-box !important;
+
+    background: var(--ui-bg) !important;
+
+    color: var(--ui-text) !important;
+
+    border: 1px solid var(--ui-border) !important;
+
+    border-radius: var(--ui-radius-sm) !important;
+
+    box-shadow: var(--ui-shadow-sm) !important;
+
+    font-family: var(--ui-font) !important;
+
+    font-size: 18px !important;
+
+    font-weight: 600 !important;
+
+    cursor: pointer !important;
+
+    display: flex !important;
+
+    align-items: center !important;
+
+    justify-content: center !important;
+
+    white-space: normal !important;
+}
+
+
+#dynamic-style-open-button:hover {
+
+    background: var(--ui-bg-hover) !important;
+
+    border-color: var(--ui-accent) !important;
+}
+
+
+/* ====================================================================
+   STYLE EDITOR PANEL
+   ==================================================================== */
+
+.dynamic-style-panel {
+
+    position: fixed !important;
+
+    top: var(--style-top) !important;
+
+    left:
+        calc(
+            var(--edge) +
+            var(--main-btn) +
+            var(--panel-gap)
+        ) !important;
+
+    right: auto !important;
+
+    z-index: 30000 !important;
+
+    box-sizing: border-box !important;
+
+    max-width:
+        calc(100vw - 120px) !important;
+
+    overflow-x: hidden !important;
+
+    overflow-y: auto !important;
+}
+
+
+/* ====================================================================
+   SEARCH BUTTON
+   ==================================================================== */
+
+#stage6-search-button,
+#btn-search {
+
+    position: fixed !important;
+
+    top: var(--search-top) !important;
+
+    left: var(--edge) !important;
+
+    right: auto !important;
+    bottom: auto !important;
+
+    width: var(--main-btn) !important;
+    min-width: var(--main-btn) !important;
+
+    height: var(--main-btn) !important;
+    min-height: var(--main-btn) !important;
+
+    margin: 0 !important;
+    padding: 0 !important;
+
+    z-index: var(--z-search) !important;
+
+    box-sizing: border-box !important;
+
+    border: 1px solid var(--ui-border) !important;
+
+    border-radius: var(--ui-radius-sm) !important;
+
+    background: var(--ui-bg) !important;
+
+    color: var(--ui-text) !important;
+
+    box-shadow: var(--ui-shadow-sm) !important;
+
+    font-size: 18px !important;
+
+    cursor: pointer !important;
+
+    display: flex !important;
+
+    align-items: center !important;
+
+    justify-content: center !important;
+
+    white-space: normal !important;
+}
+
+
+#stage6-search-button:hover,
+#btn-search:hover {
+
+    background: var(--ui-bg-hover) !important;
+
+    border-color: var(--ui-accent) !important;
+}
+
+
+/* ====================================================================
+   SEARCH PANEL
+   ==================================================================== */
+
+#stage6-search-panel {
+
+    position: fixed !important;
+
+    top: var(--search-top) !important;
+
+    left:
+        calc(
+            var(--edge) +
+            var(--main-btn) +
+            var(--panel-gap)
+        ) !important;
+
+    right: auto !important;
+
+    width: 320px !important;
+
+    max-width:
+        calc(100vw - 120px) !important;
+
+    z-index: var(--z-search) !important;
+
+    background: var(--ui-bg) !important;
+
+    border: 1px solid var(--ui-border) !important;
+
+    border-radius: var(--ui-radius) !important;
+
+    box-shadow: var(--ui-shadow) !important;
+
+    font-family: var(--ui-font) !important;
+
+    font-size: 13px !important;
+
+    color: var(--ui-text) !important;
+
+    box-sizing: border-box !important;
+}
+
+
+/* ====================================================================
+   SEARCH INPUTS
+   ==================================================================== */
+
+#stage6-search-panel select,
+#stage6-search-panel input[type="text"],
+#stage6-search-panel input {
+
+    width: 100% !important;
+
+    height: 30px !important;
+
+    min-height: 30px !important;
+
+    padding: 4px 7px !important;
+
+    box-sizing: border-box !important;
+
+    border: 1px solid var(--ui-border) !important;
+
+    border-radius: var(--ui-radius-sm) !important;
+
+    background: var(--ui-bg-subtle) !important;
+
+    font-family: var(--ui-font) !important;
+
+    font-size: 11px !important;
+
+    color: var(--ui-text) !important;
+}
+
+
+#stage6-search-panel select:focus,
+#stage6-search-panel input:focus {
+
+    outline: none !important;
+
+    border-color: var(--ui-accent) !important;
+
+    box-shadow:
+        0 0 0 3px var(--ui-accent-soft) !important;
+}
+
+
+/* ====================================================================
+   SEARCH PANEL BUTTONS
+   ==================================================================== */
+
+#stage6-search-panel button {
+
+    width: auto !important;
+
+    min-width: 0 !important;
+
+    height: 30px !important;
+
+    min-height: 30px !important;
+
+    padding: 4px 9px !important;
+
+    margin: 2px 2px 2px 0 !important;
+
+    box-sizing: border-box !important;
+
+    white-space: nowrap !important;
+
+    overflow: hidden !important;
+
+    text-overflow: ellipsis !important;
+
+    font-family: var(--ui-font) !important;
+
+    font-size: 11px !important;
+
+    font-weight: 600 !important;
+
+    line-height: 1.2 !important;
+
+    border: 1px solid var(--ui-border) !important;
+
+    border-radius: var(--ui-radius-sm) !important;
+
+    background: var(--ui-bg-subtle) !important;
+
+    cursor: pointer !important;
+}
+
+
+#stage6-search-panel button:hover {
+
+    background: var(--ui-bg-active) !important;
+}
+
+
+/* ====================================================================
+   SEARCH SUGGESTIONS
+   ==================================================================== */
+
+#stage6-value-suggestions {
+
+    border: 1px solid var(--ui-border) !important;
+
+    border-radius:
+        0 0
+        var(--ui-radius-sm)
+        var(--ui-radius-sm) !important;
+
+    box-shadow:
+        0 6px 16px rgba(16, 24, 40, 0.18) !important;
+}
+
+
+#stage6-value-suggestions > div:hover {
+
+    background: var(--ui-accent-soft) !important;
+}
+
+
+/* ====================================================================
+   8. MEASURE PANEL INTERNAL CONTROLS
+   ==================================================================== */
+
+#stage14-panel button {
+
+    width: auto !important;
+
+    min-width: 0 !important;
+
+    height: 30px !important;
+
+    min-height: 30px !important;
+
+    padding: 4px 9px !important;
+
+    margin: 2px 2px 2px 0 !important;
+
+    box-sizing: border-box !important;
+
+    white-space: nowrap !important;
+
+    overflow: hidden !important;
+
+    text-overflow: ellipsis !important;
+
+    font-size: 11px !important;
+
+    line-height: 1.2 !important;
+}
+
+
+#stage14-panel input,
+#stage14-panel select {
+
+    height: 30px !important;
+
+    min-height: 30px !important;
+
+    padding: 4px 7px !important;
+
+    box-sizing: border-box !important;
+
+    font-size: 11px !important;
+}
+
+
+/* ====================================================================
+   9. STYLE EDITOR INTERNAL CONTROLS
+   ==================================================================== */
+
+.dynamic-style-panel button {
+
+    width: auto !important;
+
+    min-width: 0 !important;
+
+    height: 30px !important;
+
+    min-height: 30px !important;
+
+    padding: 4px 9px !important;
+
+    margin: 2px 2px 2px 0 !important;
+
+    box-sizing: border-box !important;
+
+    white-space: nowrap !important;
+
+    overflow: hidden !important;
+
+    text-overflow: ellipsis !important;
+
+    font-size: 11px !important;
+
+    line-height: 1.2 !important;
+}
+
+
+.dynamic-style-panel input,
+.dynamic-style-panel select {
+
+    height: 30px !important;
+
+    min-height: 30px !important;
+
+    padding: 4px 7px !important;
+
+    box-sizing: border-box !important;
+
+    font-size: 11px !important;
+}
+
+
+/* ====================================================================
+   10. LAYER SWITCHER INTERNAL BUTTONS
+   ==================================================================== */
+
+#layer-switcher-content button {
+
+    width: auto !important;
+
+    min-width: 0 !important;
+
+    height: 28px !important;
+
+    min-height: 28px !important;
+
+    padding: 4px 8px !important;
+
+    margin: 2px 2px 2px 0 !important;
+
+    box-sizing: border-box !important;
+
+    white-space: nowrap !important;
+
+    overflow: hidden !important;
+
+    text-overflow: ellipsis !important;
+
+    font-size: 10.5px !important;
+
+    line-height: 1.2 !important;
+}
+
+
+/* ====================================================================
+   11. FEATURE INFO POPUP
+   ==================================================================== */
+
+#feature-info-popup {
+
+    position: absolute !important;
+
+    display: none;
+
+    width: 300px !important;
+
+    max-width:
+        calc(100vw - 20px) !important;
+
+    z-index: var(--z-popup) !important;
+
+    background: var(--ui-bg) !important;
+
+    border: 1px solid var(--ui-border) !important;
+
+    border-radius: 8px !important;
+
+    box-shadow:
+        0 3px 12px rgba(16, 24, 40, 0.20) !important;
+
+    font-family: var(--ui-font) !important;
+
+    font-size: 11px !important;
+
+    color: var(--ui-text) !important;
+
+    overflow: hidden;
+
+    box-sizing: border-box !important;
+}
+
+
+/* ====================================================================
+   POPUP HEADER
+   ==================================================================== */
+
+.feature-popup-header {
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: space-between;
+
+    padding: 7px 10px !important;
+
+    min-height: 30px !important;
+
+    background:
+        linear-gradient(
+            135deg,
+            var(--ui-accent),
+            var(--ui-accent-dark)
+        ) !important;
+
+    color: #fff !important;
+
+    font-size: 13px !important;
+
+    font-weight: 700 !important;
+
+    line-height: 1.2 !important;
+}
+
+
+/* ====================================================================
+   POPUP CLOSE
+   ==================================================================== */
+
+#feature-popup-close {
+
+    width: 24px !important;
+    min-width: 24px !important;
+
+    height: 24px !important;
+    min-height: 24px !important;
+
+    padding: 0 !important;
+
+    margin: 0 !important;
+
+    border: none !important;
+
+    border-radius: 5px !important;
+
+    background: rgba(255, 255, 255, 0.18) !important;
+
+    color: #fff !important;
+
+    font-size: 17px !important;
+
+    line-height: 1 !important;
+
+    display: inline-flex !important;
+
+    align-items: center !important;
+
+    justify-content: center !important;
+}
+
+
+#feature-popup-close:hover {
+
+    background: rgba(255, 255, 255, 0.32) !important;
+}
+
+
+/* ====================================================================
+   POPUP LAYER
+   ==================================================================== */
+
+.feature-popup-layer {
+
+    padding: 5px 10px !important;
+
+    font-weight: 600 !important;
+
+    color: var(--ui-text-muted) !important;
+
+    background: var(--ui-bg-subtle) !important;
+
+    border-bottom: 1px solid var(--ui-border-soft) !important;
+
+    font-size: 10px !important;
+
+    line-height: 1.2 !important;
+}
+
+
+/* ====================================================================
+   POPUP CONTENT
+   ==================================================================== */
+
+.feature-popup-content {
+
+    max-height: 260px !important;
+
+    overflow-y: auto !important;
+
+    padding: 2px 10px 3px !important;
+}
+
+
+/* ====================================================================
+   POPUP ROW
+   ==================================================================== */
+
+.feature-popup-row {
+
+    display: grid !important;
+
+    grid-template-columns: 38% 62% !important;
+
+    border-bottom: 1px solid var(--ui-border-soft) !important;
+
+    padding: 5px 0 !important;
+
+    min-height: 0 !important;
+
+    line-height: 1.25 !important;
+}
+
+
+.feature-popup-row:last-child {
+
+    border-bottom: none !important;
+}
+
+
+/* ====================================================================
+   POPUP FIELD
+   ==================================================================== */
+
+.feature-popup-field {
+
+    font-weight: 600 !important;
+
+    color: var(--ui-text-muted) !important;
+
+    font-size: 10px !important;
+
+    line-height: 1.25 !important;
+
+    padding-right: 5px !important;
+
+    word-break: break-word !important;
+}
+
+
+.feature-popup-value {
+
+    color: var(--ui-text) !important;
+
+    font-size: 11px !important;
+
+    line-height: 1.25 !important;
+
+    word-break: break-word !important;
+}
+
+
+/* ====================================================================
+   POPUP BUTTON AREA
+   ==================================================================== */
+
+.feature-popup-buttons {
+
+    padding: 6px 10px !important;
+
+    border-top: 1px solid var(--ui-border-soft) !important;
+
+    background: var(--ui-bg-subtle) !important;
+}
+
+
+.feature-popup-buttons button {
+
+    width: auto !important;
+
+    min-width: 0 !important;
+
+    height: 29px !important;
+
+    min-height: 29px !important;
+
+    padding: 4px 9px !important;
+
+    margin: 0 !important;
+
+    box-sizing: border-box !important;
+
+    white-space: nowrap !important;
+
+    overflow: hidden !important;
+
+    text-overflow: ellipsis !important;
+
+    font-family: var(--ui-font) !important;
+
+    font-size: 10.5px !important;
+
+    line-height: 1.2 !important;
+}
+
+
+.feature-popup-buttons button:hover {
+
+    background: var(--ui-bg-hover) !important;
+}
+
+
+/* ====================================================================
+   12. COORDINATE READOUT
+   ==================================================================== */
+
+.coordinates-readout {
+
+    position: fixed;
+
+    bottom: var(--edge);
+
+    right: var(--edge);
+
+    z-index: var(--z-coords);
+
+    display: grid;
+
+    grid-template-columns: auto auto;
+
+    column-gap: 0;
+
+    background:
+        rgba(255, 255, 255, 0.94);
+
+    backdrop-filter: blur(5px);
+
+    -webkit-backdrop-filter: blur(5px);
+
+    border: 1px solid var(--ui-border);
+
+    border-radius: var(--ui-radius-sm);
+
+    box-shadow: var(--ui-shadow-sm);
+
+    font-family: var(--ui-font);
+
+    font-size: 12px;
+
+    color: var(--ui-text);
+
+    overflow: hidden;
+
+    user-select: none;
+
+    pointer-events: none;
+}
+
+
+.coordinates-readout .coord {
+
+    display: flex;
+
+    flex-direction: column;
+
+    align-items: center;
+
+    justify-content: center;
+
+    gap: 2px;
+
+    min-width: 105px;
+
+    padding: 5px 10px;
+
+    border-right: 1px solid var(--ui-border-soft);
+}
+
+
+.coordinates-readout .coord:last-child {
+
+    border-right: none;
+}
+
+
+.coordinates-readout .coord-label {
+
+    font-size: 9px;
+
+    font-weight: 700;
+
+    text-transform: uppercase;
+
+    letter-spacing: .6px;
+
+    color: var(--ui-text-faint);
+
+    line-height: 1.1;
+}
+
+
+.coordinates-readout .coord-value {
+
+    font-family: var(--ui-mono);
+
+    font-size: 12px;
+
+    font-weight: 600;
+
+    color: var(--ui-text);
+
+    white-space: nowrap;
+
+    line-height: 1.2;
+}
+
+
+.coordinates-readout .coord-value.utm {
+
+    font-size: 11.5px;
+}
+
+
+.coordinates-readout .coord-value.latlon {
+
+    font-size: 12px;
+}
+
+
+/* ====================================================================
+   13. MOBILE — MAX WIDTH 600px
+   ==================================================================== */
+
+@media (max-width: 600px) {
+
+    :root {
+
+        --mobile-edge: 12px;
+
+        --mobile-btn: 40px;
+
+        --mobile-panel-gap: 8px;
+
+        --mobile-panel-left:
+            calc(
+                var(--mobile-edge) +
+                var(--mobile-btn) +
+                var(--mobile-panel-gap)
+            );
+    }
+
+
+    /* ---------------------------------------------------------------
+       NORTH
+       --------------------------------------------------------------- */
+
+    .stage15-north-symbol {
+
+        position: fixed !important;
+
+        top: 12px !important;
+        right: 12px !important;
+
+        width: 48px !important;
+        height: 48px !important;
+    }
+
+
+    .stage15-north-letter {
+
+        font-size: 16px !important;
+    }
+
+
+    .stage15-north-arrow {
+
+        transform: scale(.88);
+    }
+
+
+    /* ---------------------------------------------------------------
+       LAYER SWITCHER
+       --------------------------------------------------------------- */
+
+    .layer-switcher {
+
+        position: fixed !important;
+
+        top:
+            calc(
+                12px +
+                48px +
+                10px
+            ) !important;
+
+        right: 12px !important;
+
+        width: 46px !important;
+        height: 46px !important;
+    }
+
+
+    .layer-switcher-header {
+
+        width: 46px !important;
+        min-width: 46px !important;
+
+        height: 46px !important;
+        min-height: 46px !important;
+    }
+
+
+    .layer-switcher-title::before {
+
+        width: 26px !important;
+        height: 26px !important;
+    }
+
+
+    #layer-switcher-content {
+
+        width: 230px !important;
+
+        max-width:
+            calc(100vw - 20px) !important;
+
+        max-height:
+            calc(100vh - 130px) !important;
+
+        overflow-y: auto !important;
+    }
+
+
+    /* ---------------------------------------------------------------
+       ZOOM
+       --------------------------------------------------------------- */
+
+    .ol-zoom {
+
+        position: fixed !important;
+
+        top: 12px !important;
+        left: 12px !important;
+
+        width: 40px !important;
+        height: 80px !important;
+
+        z-index: 16000 !important;
+    }
+
+
+    .ol-zoom button {
+
+        width: 40px !important;
+        min-width: 40px !important;
+
+        height: 40px !important;
+        min-height: 40px !important;
+
+        padding: 0 !important;
+    }
+
+
+    /* ---------------------------------------------------------------
+       MEASURE
+       --------------------------------------------------------------- */
+
+    #stage14-control {
+
+        position: fixed !important;
+
+        top: 132px !important;
+        left: 12px !important;
+
+        width: 40px !important;
+        height: 40px !important;
+    }
+
+
+    #stage14-measure-button {
+
+        width: 40px !important;
+        min-width: 40px !important;
+
+        height: 40px !important;
+        min-height: 40px !important;
+
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+
+
+    /* ---------------------------------------------------------------
+       MEASURE PANEL
+       --------------------------------------------------------------- */
+
+    #stage14-panel {
+
+        position: fixed !important;
+
+        top: 132px !important;
+
+        left:
+            var(--mobile-panel-left) !important;
+
+        right: auto !important;
+        bottom: auto !important;
+
+        width:
+            calc(
+                100vw -
+                var(--mobile-panel-left) -
+                var(--mobile-edge)
+            ) !important;
+
+        max-width:
+            calc(
+                100vw -
+                var(--mobile-panel-left) -
+                var(--mobile-edge)
+            ) !important;
+
+        max-height:
+            calc(100vh - 150px) !important;
+
+        overflow-y: auto !important;
+
+        box-sizing: border-box !important;
+    }
+
+
+    /* ---------------------------------------------------------------
+       LOCATION
+       --------------------------------------------------------------- */
+
+    .ol-control.geolocate {
+
+        position: fixed !important;
+
+        top: 184px !important;
+        left: 12px !important;
+
+        width: 40px !important;
+        height: 40px !important;
+    }
+
+
+    .geolocate-button {
+
+        width: 40px !important;
+        min-width: 40px !important;
+
+        height: 40px !important;
+        min-height: 40px !important;
+
+        padding: 0 !important;
+    }
+
+
+    /* ---------------------------------------------------------------
+       STYLE EDITOR CONTROL
+       --------------------------------------------------------------- */
+
+    .dynamic-style-control {
+
+        position: fixed !important;
+
+        top: 236px !important;
+        left: 12px !important;
+
+        width: 40px !important;
+        height: 40px !important;
+    }
+
+
+    .dynamic-style-control > button {
+
+        width: 40px !important;
+        min-width: 40px !important;
+
+        height: 40px !important;
+        min-height: 40px !important;
+
+        padding: 0 !important;
+    }
+
+
+    /* ---------------------------------------------------------------
+       DIRECT STYLE BUTTON
+       --------------------------------------------------------------- */
+
+    #dynamic-style-open-button {
+
+        position: fixed !important;
+
+        top: 236px !important;
+        left: 12px !important;
+
+        right: auto !important;
+        bottom: auto !important;
+
+        width: 40px !important;
+        min-width: 40px !important;
+
+        height: 40px !important;
+        min-height: 40px !important;
+
+        padding: 0 !important;
+
+        margin: 0 !important;
+    }
+
+
+    /* ---------------------------------------------------------------
+       STYLE PANEL
+       --------------------------------------------------------------- */
+
+    .dynamic-style-panel {
+
+        position: fixed !important;
+
+        top: 236px !important;
+
+        left:
+            var(--mobile-panel-left) !important;
+
+        right: auto !important;
+
+        width:
+            calc(
+                100vw -
+                var(--mobile-panel-left) -
+                var(--mobile-edge)
+            ) !important;
+
+        max-width:
+            calc(
+                100vw -
+                var(--mobile-panel-left) -
+                var(--mobile-edge)
+            ) !important;
+
+        max-height:
+            calc(100vh - 150px) !important;
+
+        padding: 10px !important;
+
+        overflow-x: hidden !important;
+
+        overflow-y: auto !important;
+
+        box-sizing: border-box !important;
+
+        border-radius: 8px !important;
+    }
+
+
+    /* ---------------------------------------------------------------
+       STYLE PANEL CONTENT
+       --------------------------------------------------------------- */
+
+    .dynamic-style-title {
+
+        font-size: 14px !important;
+
+        margin-bottom: 8px !important;
+
+        padding-bottom: 6px !important;
+    }
+
+
+    .dynamic-style-row {
+
+        gap: 6px !important;
+
+        margin-bottom: 7px !important;
+    }
+
+
+    .dynamic-style-row select {
+
+        width: 145px !important;
+
+        max-width: 145px !important;
+
+        height: 30px !important;
+
+        font-size: 12px !important;
+    }
+
+
+    .dynamic-style-row input[type="number"] {
+
+        width: 70px !important;
+
+        height: 30px !important;
+    }
+
+
+    .dynamic-style-row input[type="color"] {
+
+        width: 42px !important;
+
+        height: 30px !important;
+    }
+
+
+    .dynamic-style-category-values {
+
+        max-height: 220px !important;
+
+        padding: 2px !important;
+    }
+
+
+    .dynamic-category-row {
+
+        min-height: 34px !important;
+
+        padding: 4px 5px !important;
+
+        gap: 6px !important;
+    }
+
+
+    .dynamic-category-name {
+
+        font-size: 11px !important;
+
+        line-height: 1.2 !important;
+    }
+
+
+    .dynamic-category-color {
+
+        width: 38px !important;
+
+        min-width: 38px !important;
+
+        height: 27px !important;
+    }
+
+
+    .dynamic-style-buttons {
+
+        gap: 6px !important;
+
+        margin-top: 9px !important;
+    }
+
+
+    .dynamic-style-buttons button {
+
+        min-height: 29px !important;
+
+        height: 29px !important;
+
+        padding: 4px 7px !important;
+
+        font-size: 10px !important;
+    }
+
+
+    /* ---------------------------------------------------------------
+       SEARCH
+       --------------------------------------------------------------- */
+
+    #stage6-search-button,
+    #btn-search {
+
+        position: fixed !important;
+
+        top: 288px !important;
+        left: 12px !important;
+
+        width: 40px !important;
+        min-width: 40px !important;
+
+        height: 40px !important;
+        min-height: 40px !important;
+
+        padding: 0 !important;
+
+        margin: 0 !important;
+    }
+
+
+    /* ---------------------------------------------------------------
+       SEARCH PANEL
+       --------------------------------------------------------------- */
+
+    #stage6-search-panel {
+
+        position: fixed !important;
+
+        top: 288px !important;
+
+        left:
+            var(--mobile-panel-left) !important;
+
+        right: auto !important;
+
+        width:
+            calc(
+                100vw -
+                var(--mobile-panel-left) -
+                var(--mobile-edge)
+            ) !important;
+
+        max-width:
+            calc(
+                100vw -
+                var(--mobile-panel-left) -
+                var(--mobile-edge)
+            ) !important;
+
+        max-height:
+            calc(100vh - 150px) !important;
+
+        overflow-y: auto !important;
+
+        box-sizing: border-box !important;
+    }
+
+
+    #stage6-search-panel input,
+    #stage6-search-panel select {
+
+        width: 100% !important;
+
+        max-width: 100% !important;
+
+        height: 29px !important;
+
+        min-height: 29px !important;
+
+        padding: 4px 6px !important;
+
+        font-size: 10px !important;
+    }
+
+
+    #stage6-search-panel button {
+
+        width: auto !important;
+
+        min-width: 0 !important;
+
+        height: 29px !important;
+
+        min-height: 29px !important;
+
+        padding: 4px 7px !important;
+
+        margin: 2px 2px 2px 0 !important;
+
+        font-size: 10px !important;
+    }
+
+
+    /* ---------------------------------------------------------------
+       MEASURE PANEL BUTTONS
+       --------------------------------------------------------------- */
+
+    #stage14-panel button {
+
+        width: auto !important;
+
+        min-width: 0 !important;
+
+        height: 29px !important;
+
+        min-height: 29px !important;
+
+        padding: 4px 7px !important;
+
+        margin: 2px 2px 2px 0 !important;
+
+        font-size: 10px !important;
+    }
+
+
+    #stage14-panel input,
+    #stage14-panel select {
+
+        height: 29px !important;
+
+        min-height: 29px !important;
+
+        padding: 4px 6px !important;
+
+        font-size: 10px !important;
+    }
+
+
+    /* ---------------------------------------------------------------
+       STYLE PANEL BUTTONS
+       --------------------------------------------------------------- */
+
+    .dynamic-style-panel button {
+
+        width: auto !important;
+
+        min-width: 0 !important;
+
+        height: 29px !important;
+
+        min-height: 29px !important;
+
+        padding: 4px 7px !important;
+
+        margin: 2px 2px 2px 0 !important;
+
+        font-size: 10px !important;
+    }
+
+
+    .dynamic-style-panel input,
+    .dynamic-style-panel select {
+
+        height: 29px !important;
+
+        min-height: 29px !important;
+
+        padding: 4px 6px !important;
+
+        font-size: 10px !important;
+    }
+
+
+    /* ---------------------------------------------------------------
+       LAYER SWITCHER INTERNAL BUTTONS
+       --------------------------------------------------------------- */
+
+    #layer-switcher-content button {
+
+        width: auto !important;
+
+        min-width: 0 !important;
+
+        height: 27px !important;
+
+        min-height: 27px !important;
+
+        padding: 3px 7px !important;
+
+        margin: 2px 2px 2px 0 !important;
+
+        font-size: 10px !important;
+    }
+
+
+    /* ---------------------------------------------------------------
+       FEATURE POPUP
+       --------------------------------------------------------------- */
+
+    #feature-info-popup {
+
+        width: 280px !important;
+
+        max-width:
+            calc(100vw - 16px) !important;
+
+        border-radius: 7px !important;
+
+        font-size: 10.5px !important;
+    }
+
+
+    .feature-popup-header {
+
+        padding: 6px 9px !important;
+
+        min-height: 28px !important;
+
+        font-size: 12px !important;
+    }
+
+
+    #feature-popup-close {
+
+        width: 23px !important;
+        min-width: 23px !important;
+
+        height: 23px !important;
+        min-height: 23px !important;
+
+        font-size: 16px !important;
+    }
+
+
+    .feature-popup-layer {
+
+        padding: 4px 9px !important;
+
+        font-size: 9.5px !important;
+    }
+
+
+    .feature-popup-content {
+
+        max-height: 230px !important;
+
+        padding: 1px 9px 2px !important;
+    }
+
+
+    .feature-popup-row {
+
+        grid-template-columns: 37% 63% !important;
+
+        padding: 4px 0 !important;
+
+        line-height: 1.2 !important;
+    }
+
+
+    .feature-popup-field {
+
+        font-size: 9.5px !important;
+
+        line-height: 1.2 !important;
+
+        padding-right: 4px !important;
+    }
+
+
+    .feature-popup-value {
+
+        font-size: 10.5px !important;
+
+        line-height: 1.2 !important;
+    }
+
+
+    .feature-popup-buttons {
+
+        padding: 5px 9px !important;
+    }
+
+
+    .feature-popup-buttons button {
+
+        width: auto !important;
+
+        min-width: 0 !important;
+
+        height: 28px !important;
+
+        min-height: 28px !important;
+
+        padding: 4px 7px !important;
+
+        margin: 0 !important;
+
+        font-size: 10px !important;
+    }
+
+
+    /* ---------------------------------------------------------------
+       COORDINATES
+       --------------------------------------------------------------- */
+
+    .coordinates-readout {
+
+        bottom: 8px !important;
+
+        right: 8px !important;
+
+        font-size: 10px !important;
+
+        border-radius: 7px !important;
+    }
+
+
+    .coordinates-readout .coord {
+
+        min-width: 88px !important;
+
+        padding: 4px 7px !important;
+
+        gap: 1px !important;
+    }
+
+
+    .coordinates-readout .coord-label {
+
+        font-size: 8px !important;
+
+        letter-spacing: .5px !important;
+    }
+
+
+    .coordinates-readout .coord-value {
+
+        font-size: 10px !important;
+    }
+
+
+    .coordinates-readout .coord-value.utm {
+
+        font-size: 9.5px !important;
+    }
+
+
+    .coordinates-readout .coord-value.latlon {
+
+        font-size: 10px !important;
+    }
+}
+
+
+/* ====================================================================
+   14. VERY SMALL PHONES
+   ==================================================================== */
+
+@media (max-width: 380px) {
+
+    .dynamic-style-panel {
+
+        left: 60px !important;
+
+        right: 6px !important;
+
+        top: 236px !important;
+
+        width: auto !important;
+
+        max-width: none !important;
+
+        max-height:
+            calc(100vh - 242px) !important;
+
+        padding: 8px !important;
+    }
+
+
+    .dynamic-style-row select {
+
+        width: 125px !important;
+
+        max-width: 125px !important;
+    }
+
+
+    .dynamic-style-row label {
+
+        font-size: 11px !important;
+    }
+
+
+    .dynamic-style-category-values {
+
+        max-height: 180px !important;
+    }
+
+
+    .dynamic-category-name {
+
+        font-size: 10px !important;
+    }
+
+
+    /* ---------------------------------------------------------------
+       POPUP
+       --------------------------------------------------------------- */
+
+    #feature-info-popup {
+
+        width: 265px !important;
+
+        max-width:
+            calc(100vw - 12px) !important;
+    }
+
+
+    .feature-popup-header {
+
+        padding: 5px 8px !important;
+
+        min-height: 26px !important;
+
+        font-size: 11.5px !important;
+    }
+
+
+    .feature-popup-layer {
+
+        padding: 3px 8px !important;
+
+        font-size: 9px !important;
+    }
+
+
+    .feature-popup-content {
+
+        max-height: 210px !important;
+
+        padding: 1px 8px 2px !important;
+    }
+
+
+    .feature-popup-row {
+
+        grid-template-columns: 35% 65% !important;
+
+        padding: 3px 0 !important;
+    }
+
+
+    .feature-popup-field {
+
+        font-size: 9px !important;
+    }
+
+
+    .feature-popup-value {
+
+        font-size: 10px !important;
+    }
+
+
+    .feature-popup-buttons {
+
+        padding: 4px 8px !important;
+    }
+
+
+    .feature-popup-buttons button {
+
+        height: 27px !important;
+
+        min-height: 27px !important;
+
+        padding: 3px 7px !important;
+
+        font-size: 10px !important;
+    }
+}
+
+
+/* ====================================================================
+   15. FINAL CONTROL POSITION LOCK
+   ====================================================================
+   
+   KEEP THIS SECTION AT THE VERY END.
+   
+   These rules make sure the main controls cannot be moved by:
+   - generic button CSS
+   - panel CSS
+   - OpenLayers default positioning
+   - mobile CSS
+   - other plugins
+   ==================================================================== */
+
+
+/* --------------------------------------------------------------------
+   NORTH
+   -------------------------------------------------------------------- */
+
+.stage15-north-symbol {
+
+    position: fixed !important;
+
+    top: var(--edge) !important;
+    right: var(--edge) !important;
+
+    left: auto !important;
+    bottom: auto !important;
+
+    width: 56px !important;
+    height: 56px !important;
+
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+
+/* --------------------------------------------------------------------
+   LAYER SWITCHER
+   -------------------------------------------------------------------- */
+
+.layer-switcher {
+
+    position: fixed !important;
+
+    top:
+        calc(
+            var(--edge) +
+            56px +
+            10px
+        ) !important;
+
+    right: var(--edge) !important;
+
+    left: auto !important;
+    bottom: auto !important;
+
+    width: 48px !important;
+    height: 48px !important;
+
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+
+.layer-switcher-header {
+
+    position: relative !important;
+
+    top: 0 !important;
+    left: 0 !important;
+
+    width: 48px !important;
+    height: 48px !important;
+
+    min-width: 48px !important;
+    min-height: 48px !important;
+
+    margin: 0 !important;
+    padding: 0 !important;
+
+    transform-origin: center center !important;
+}
+
+
+/* --------------------------------------------------------------------
+   ZOOM
+   -------------------------------------------------------------------- */
+
+.ol-zoom {
+
+    position: fixed !important;
+
+    top: var(--zoom-top) !important;
+    left: var(--edge) !important;
+
+    right: auto !important;
+    bottom: auto !important;
+
+    width: 40px !important;
+
+    margin: 0 !important;
+    padding: 0 !important;
+
+    transform: none !important;
+}
+
+
+.ol-zoom button {
+
+    position: relative !important;
+
+    top: 0 !important;
+    left: 0 !important;
+
+    width: 40px !important;
+    min-width: 40px !important;
+
+    height: 40px !important;
+    min-height: 40px !important;
+
+    margin: 0 !important;
+    padding: 0 !important;
+
+    transform: none !important;
+}
+
+
+/* --------------------------------------------------------------------
+   MEASURE
+   -------------------------------------------------------------------- */
+
+#stage14-control {
+
+    position: fixed !important;
+
+    top: 132px !important;
+    left: var(--edge) !important;
+
+    right: auto !important;
+    bottom: auto !important;
+
+    width: 40px !important;
+    height: 40px !important;
+
+    margin: 0 !important;
+    padding: 0 !important;
+
+    transform: none !important;
+}
+
+
+#stage14-measure-button {
+
+    position: relative !important;
+
+    top: 0 !important;
+    left: 0 !important;
+
+    width: 40px !important;
+    min-width: 40px !important;
+
+    height: 40px !important;
+    min-height: 40px !important;
+
+    margin: 0 !important;
+    padding: 0 !important;
+
+    transform: none !important;
+}
+
+
+/* --------------------------------------------------------------------
+   LOCATION
+   -------------------------------------------------------------------- */
+
+.ol-control.geolocate {
+
+    position: fixed !important;
+
+    top: 184px !important;
+    left: var(--edge) !important;
+
+    right: auto !important;
+    bottom: auto !important;
+
+    width: 40px !important;
+    height: 40px !important;
+
+    margin: 0 !important;
+    padding: 0 !important;
+
+    transform: none !important;
+}
+
+
+.geolocate-button {
+
+    position: relative !important;
+
+    top: 0 !important;
+    left: 0 !important;
+
+    width: 40px !important;
+    min-width: 40px !important;
+
+    height: 40px !important;
+    min-height: 40px !important;
+
+    margin: 0 !important;
+    padding: 0 !important;
+
+    transform: none !important;
+}
+
+
+/* --------------------------------------------------------------------
+   STYLE EDITOR
+   -------------------------------------------------------------------- */
+
+.dynamic-style-control {
+
+    position: fixed !important;
+
+    top: 236px !important;
+    left: var(--edge) !important;
+
+    right: auto !important;
+    bottom: auto !important;
+
+    width: 40px !important;
+    height: 40px !important;
+
+    margin: 0 !important;
+    padding: 0 !important;
+
+    transform: none !important;
+}
+
+
+.dynamic-style-control > button {
+
+    position: relative !important;
+
+    top: 0 !important;
+    left: 0 !important;
+
+    width: 40px !important;
+    min-width: 40px !important;
+
+    height: 40px !important;
+    min-height: 40px !important;
+
+    margin: 0 !important;
+    padding: 0 !important;
+
+    transform: none !important;
+}
+
+
+/* Direct Style button */
+#dynamic-style-open-button {
+
+    position: fixed !important;
+
+    top: 236px !important;
+    left: var(--edge) !important;
+
+    right: auto !important;
+    bottom: auto !important;
+
+    width: 40px !important;
+    min-width: 40px !important;
+
+    height: 40px !important;
+    min-height: 40px !important;
+
+    margin: 0 !important;
+    padding: 0 !important;
+
+    transform: none !important;
+}
+
+
+/* --------------------------------------------------------------------
+   SEARCH
+   -------------------------------------------------------------------- */
+
+#stage6-search-button,
+#btn-search {
+
+    position: fixed !important;
+
+    top: 288px !important;
+    left: var(--edge) !important;
+
+    right: auto !important;
+    bottom: auto !important;
+
+    width: 40px !important;
+    min-width: 40px !important;
+
+    height: 40px !important;
+    min-height: 40px !important;
+
+    margin: 0 !important;
+    padding: 0 !important;
+
+    transform: none !important;
+}
+
+
+/* ====================================================================
+   FINAL MOBILE POSITION LOCK
+   ==================================================================== */
+
+@media (max-width: 600px) {
+
+    .stage15-north-symbol {
+
+        position: fixed !important;
+
+        top: 12px !important;
+        right: 12px !important;
+
+        width: 48px !important;
+        height: 48px !important;
+
+        left: auto !important;
+        bottom: auto !important;
+    }
+
+
+    .layer-switcher {
+
+        position: fixed !important;
+
+        top: 70px !important;
+        right: 12px !important;
+
+        width: 46px !important;
+        height: 46px !important;
+
+        left: auto !important;
+        bottom: auto !important;
+    }
+
+
+    .layer-switcher-header {
+
+        width: 46px !important;
+        min-width: 46px !important;
+
+        height: 46px !important;
+        min-height: 46px !important;
+    }
+
+
+    .ol-zoom {
+
+        position: fixed !important;
+
+        top: 12px !important;
+        left: 12px !important;
+
+        width: 40px !important;
+
+        right: auto !important;
+        bottom: auto !important;
+    }
+
+
+    .ol-zoom button {
+
+        width: 40px !important;
+        min-width: 40px !important;
+
+        height: 40px !important;
+        min-height: 40px !important;
+
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+
+
+    #stage14-control {
+
+        position: fixed !important;
+
+        top: 132px !important;
+        left: 12px !important;
+
+        width: 40px !important;
+        height: 40px !important;
+
+        right: auto !important;
+        bottom: auto !important;
+    }
+
+
+    #stage14-measure-button {
+
+        width: 40px !important;
+        min-width: 40px !important;
+
+        height: 40px !important;
+        min-height: 40px !important;
+
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+
+
+    .ol-control.geolocate {
+
+        position: fixed !important;
+
+        top: 184px !important;
+        left: 12px !important;
+
+        width: 40px !important;
+        height: 40px !important;
+
+        right: auto !important;
+        bottom: auto !important;
+    }
+
+
+    .geolocate-button {
+
+        width: 40px !important;
+        min-width: 40px !important;
+
+        height: 40px !important;
+        min-height: 40px !important;
+
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+
+
+    .dynamic-style-control {
+
+        position: fixed !important;
+
+        top: 236px !important;
+        left: 12px !important;
+
+        width: 40px !important;
+        height: 40px !important;
+
+        right: auto !important;
+        bottom: auto !important;
+    }
+
+
+    .dynamic-style-control > button {
+
+        width: 40px !important;
+        min-width: 40px !important;
+
+        height: 40px !important;
+        min-height: 40px !important;
+
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+
+
+    #dynamic-style-open-button {
+
+        position: fixed !important;
+
+        top: 236px !important;
+        left: 12px !important;
+
+        width: 40px !important;
+        min-width: 40px !important;
+
+        height: 40px !important;
+        min-height: 40px !important;
+
+        right: auto !important;
+        bottom: auto !important;
+
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+
+
+    #stage6-search-button,
+    #btn-search {
+
+        position: fixed !important;
+
+        top: 288px !important;
+        left: 12px !important;
+
+        width: 40px !important;
+        min-width: 40px !important;
+
+        height: 40px !important;
+        min-height: 40px !important;
+
+        right: auto !important;
+        bottom: auto !important;
+
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+}
+
+
+/* ====================================================================
+   CONTROL POSITION SUMMARY
+   ====================================================================
+
+   DESKTOP / MOBILE
+
+   Zoom       = 12px
+   Measure    = 132px
+   Location   = 184px
+   Style      = 236px
+   Search     = 288px
+
+   All main controls = 40 x 40 px
+
+   North Arrow:
+       Desktop = 56 x 56
+       Mobile  = 48 x 48
+
+   Layer Switcher:
+       Desktop = 48 x 48
+       Mobile  = 46 x 46
+
+   ==================================================================== */
+
+
+
+
+
+
+   

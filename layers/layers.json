@@ -1,0 +1,14 @@
+[
+    {
+        "name": "LPM",
+        "file": "LPM_1.geojson"
+    },
+    {
+        "name": "Old Survey Numbers",
+        "file": "OldSyNos.geojson"
+    },
+    {
+        "name": "Roads",
+        "file": "Roads.geojson"
+    }
+]
