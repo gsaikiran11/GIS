@@ -8,7 +8,7 @@
 // ------------------------------------------------------------
 
 const GITHUB_OWNER = "gsaikiran11";
-const GITHUB_REPO = "webmapsurvey";
+const GITHUB_REPO = "GIS";
 const GITHUB_BRANCH = "main";
 const GITHUB_LAYER_FOLDER = "layers";
 
