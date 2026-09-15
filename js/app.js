@@ -28,6 +28,7 @@ const osmLayer = new ol.layer.Tile({
     title: "OpenStreetMap",
     type: "base",
     visible: true,
+    zIndex: -1000,
     source: new ol.source.XYZ({
         url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
         attributions: '&copy; OpenStreetMap contributors'
@@ -39,15 +40,12 @@ const googleHybridLayer = new ol.layer.Tile({
     title: "Google Hybrid",
     type: "base",
     visible: false,
-
+    zIndex: -1000,
     source: new ol.source.XYZ({
-        url:
-            "https://mt1.google.com/vt/lyrs=s,h&x={x}&y={y}&z={z}",
-        attributions:
-            "© Google"
+        url: "https://mt1.google.com/vt/lyrs=s,h&x={x}&y={y}&z={z}",
+        attributions: "© Google"
     })
 });
-
 // ------------------------------------------------------------
 // MAP
 // ------------------------------------------------------------
