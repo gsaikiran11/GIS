@@ -1,0 +1,23 @@
+{
+  "name": "Web Map Survey",
+  "short_name": "Map Survey",
+  "description": "QGIS2Web based land survey and GIS mapping application",
+  "start_url": "/GIS/",
+  "scope": "/GIS/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#ffffff",
+  "theme_color": "#1f6feb",
+  "icons": [
+    {
+      "src": "/GIS/icons/image_192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/GIS/icons/image_512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
