@@ -7,8 +7,8 @@ const CACHE_NAME = `${APP_PREFIX}${VERSION}`;
 const PRECACHE = [
   '/GIS/',
   '/GIS/index.html',
-  '/GIS/js/0. app.js',
-  '/GIS/CSS/style.css'
+  '/GIS/0. app.js',
+  '/GIS/style.css'
 ];
 
 // Install: add known essentials, but don't fail if some files are missing
