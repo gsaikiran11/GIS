@@ -64,4 +64,32 @@
 
 </body>
 
+
+
+<script>
+if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => {
+        navigator.serviceWorker.register("/GIS/sw.js", {
+            scope: "/GIS/"
+        }).then((registration) => {
+
+            console.log(
+                "[GIS PWA] Service Worker registered:",
+                registration.scope
+            );
+
+        }).catch((error) => {
+
+            console.error(
+                "[GIS PWA] Service Worker registration failed:",
+                error
+            );
+
+        });
+    });
+}
+</script>
+
+
+    
 </html>
