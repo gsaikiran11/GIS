@@ -1,2072 +1,4320 @@
-/* ============================================================
-   STAGE 6
-   ADVANCED ATTRIBUTE SEARCH
-   WITH MAXIMUM 10 TYPING SUGGESTIONS
-   ============================================================ */
+
+
+// ============================================================
+
+// STAGE 6 — ADVANCED ATTRIBUTE SEARCH PRO
+
+// QGIS2WEB + OPENLAYERS
+
+// LIGHT THEME • RESPONSIVE UI • SVG ICONS
+
+// ============================================================
+
+//
+
+// FEATURES
+
+// ------------------------------------------------------------
+
+// 1. Dynamic vector-layer discovery
+
+// 2. Dynamic attribute-field discovery
+
+// 3. Multiple search conditions (AND logic)
+
+// 4. Exact match / Contains search
+
+// 5. Up to 10 autocomplete suggestions per condition
+
+// 6. Modern parcel-result cards
+
+// 7. Highlight matching parcels without changing source styles
+
+// 8. Zoom to one parcel or all matching parcels
+
+// 9. Clear results and search conditions
+
+// 10. Desktop and mobile responsive layout
+
+//
+
+// INSTALLATION
+
+// ------------------------------------------------------------
+
+// Replace your previous Stage 6 script with this complete script.
+
+// Requires OpenLayers global `ol` and your existing global `map`.
+
+// ============================================================
+
+
 
 (function () {
 
     "use strict";
 
-    console.log("Stage 6 Search initialized");
 
 
-    /* ============================================================
-       HIGHLIGHT LAYER
-       ============================================================ */
+    // --------------------------------------------------------
 
-    var stage6HighlightSource = new ol.source.Vector();
+    // CONFIGURATION
 
-    var stage6HighlightLayer = new ol.layer.Vector({
+    // --------------------------------------------------------
 
-        source: stage6HighlightSource,
 
-        zIndex: 9999,
 
-        style: new ol.style.Style({
+    const CONFIG = {
 
-            fill: new ol.style.Fill({
-                color: "rgba(255, 255, 0, 0.30)"
-            }),
+        buttonId: "stage6-search-button",
 
-            stroke: new ol.style.Stroke({
-                color: "#ff0000",
-                width: 4
-            })
+        panelId: "stage6-search-panel",
 
-        })
+        styleId: "stage6-search-styles",
 
-    });
+        highlightLayerName: "Stage6_Search_Highlight",
 
-    map.addLayer(stage6HighlightLayer);
 
 
-    /* ============================================================
-       SEARCH BUTTON
-       ============================================================ */
+        buttonTop: 288,
 
-    var searchButton =
-        document.createElement("button");
+        panelTop: 342,
 
-    searchButton.id =
-        "stage6-search-button";
+        panelLeft: 12,
 
-    searchButton.innerHTML =
-        "🔍 ";
+        panelWidth: 390,
 
-    searchButton.title =
-        "Search layer attributes";
 
-    searchButton.style.position =
-        "fixed";
 
-    searchButton.style.top =
-        "10px";
+        maxSuggestions: 10,
+        maxDetails: 4,
 
-    searchButton.style.left =
-        "10px";
+        highlightColor: "#f59e0b",
 
-    searchButton.style.zIndex =
-        "10000";
+        highlightStroke: "#ea580c",
 
-    document.body.appendChild(
-        searchButton
-    );
+        accent: "#1f6feb",
 
 
-    /* ============================================================
-       SEARCH PANEL
-       ============================================================ */
 
-    var searchPanel =
-        document.createElement("div");
+        preferredFields: [
 
-    searchPanel.id =
-        "stage6-search-panel";
+            "Parcel_num",
 
-    searchPanel.style.position =
-        "fixed";
+            "Parcel_No",
 
-    searchPanel.style.top =
-        "55px";
+            "Parcel No",
 
-    searchPanel.style.left =
-        "10px";
+            "ParcelNo",
 
-    searchPanel.style.zIndex =
-        "10001";
+            "Katha No",
 
-    searchPanel.style.width =
-        "310px";
+            "Katha_No",
 
-    searchPanel.style.maxWidth =
-        "calc(100vw - 30px)";
+            "Sy.No",
 
-    searchPanel.style.background =
-        "#ffffff";
+            "Sy.No.",
 
-    searchPanel.style.border =
-        "1px solid #ccc";
+            "Survey No",
 
-    searchPanel.style.borderRadius =
-        "8px";
+            "Survey_No",
 
-    searchPanel.style.padding =
-        "12px";
+            "LPM No",
 
-    searchPanel.style.boxShadow =
-        "0 3px 15px rgba(0,0,0,0.30)";
+            "LPM_No",
 
-    searchPanel.style.display =
-        "none";
+            "LP No",
 
-    searchPanel.style.fontFamily =
-        "Arial, sans-serif";
+            "LP_No",
 
-    document.body.appendChild(
-        searchPanel
-    );
+            "Name",
 
+            "name",
 
-    /* ============================================================
-       PANEL HEADER
-       ============================================================ */
+            "Owner",
 
-    var header =
-        document.createElement("div");
+            "Owner_Name",
 
-    header.style.display =
-        "flex";
+            "Farmer_Name"
 
-    header.style.alignItems =
-        "center";
+        ],
 
-    header.style.justifyContent =
-        "space-between";
 
-    header.style.marginBottom =
-        "10px";
 
+        preferredTitleFields: [
 
-    var headerTitle =
-        document.createElement("strong");
+            "Parcel_num",
 
-    headerTitle.innerHTML =
-        "🔍 Attribute Search";
+            "Parcel_No",
 
+            "Parcel No",
 
-    var closeButton =
-        document.createElement("button");
+            "ParcelNo",
 
-    closeButton.innerHTML =
-        "×";
+            "Katha No",
 
-    closeButton.title =
-        "Close";
+            "Katha_No",
 
-    closeButton.style.width =
-        "30px";
+            "Sy.No",
 
-    closeButton.style.height =
-        "30px";
+            "Sy.No.",
 
-    closeButton.style.padding =
-        "0";
+            "Survey No",
 
-    closeButton.style.fontSize =
-        "20px";
+            "Survey_No",
 
-    closeButton.style.cursor =
-        "pointer";
+            "LPM No",
 
-    closeButton.style.border =
-        "1px solid #ccc";
+            "LPM_No",
 
-    closeButton.style.borderRadius =
-        "5px";
+            "LP No",
 
-    closeButton.style.background =
-        "#f5f5f5";
+            "LP_No",
 
-
-    header.appendChild(
-        headerTitle
-    );
-
-    header.appendChild(
-        closeButton
-    );
-
-    searchPanel.appendChild(
-        header
-    );
-
-
-    /* ============================================================
-       LABEL FUNCTION
-       ============================================================ */
-
-    function createLabel(text) {
-
-        var label =
-            document.createElement("label");
-
-        label.innerHTML =
-            text;
-
-        label.style.display =
-            "block";
-
-        label.style.fontSize =
-            "13px";
-
-        label.style.fontWeight =
-            "bold";
-
-        label.style.marginBottom =
-            "4px";
-
-        label.style.marginTop =
-            "8px";
-
-        return label;
-    }
-
-
-    /* ============================================================
-       LAYER SELECT
-       ============================================================ */
-
-    searchPanel.appendChild(
-        createLabel("Layer")
-    );
-
-
-    var layerSelect =
-        document.createElement("select");
-
-    layerSelect.id =
-        "stage6-layer-select";
-
-    layerSelect.style.width =
-        "100%";
-
-    layerSelect.style.height =
-        "36px";
-
-    layerSelect.style.padding =
-        "5px";
-
-    layerSelect.style.border =
-        "1px solid #bbb";
-
-    layerSelect.style.borderRadius =
-        "5px";
-
-    searchPanel.appendChild(
-        layerSelect
-    );
-
-
-    /* ============================================================
-       FIELD SELECT
-       ============================================================ */
-
-    searchPanel.appendChild(
-        createLabel("Field / Attribute")
-    );
-
-
-    var fieldSelect =
-        document.createElement("select");
-
-    fieldSelect.id =
-        "stage6-field-select";
-
-    fieldSelect.style.width =
-        "100%";
-
-    fieldSelect.style.height =
-        "36px";
-
-    fieldSelect.style.padding =
-        "5px";
-
-    fieldSelect.style.border =
-        "1px solid #bbb";
-
-    fieldSelect.style.borderRadius =
-        "5px";
-
-    searchPanel.appendChild(
-        fieldSelect
-    );
-
-
-    /* ============================================================
-       VALUE LABEL
-       ============================================================ */
-
-    searchPanel.appendChild(
-        createLabel("Search Value")
-    );
-
-
-    /* ============================================================
-       VALUE WRAPPER
-       ============================================================ */
-
-    var valueWrapper =
-        document.createElement("div");
-
-    valueWrapper.style.position =
-        "relative";
-
-    valueWrapper.style.width =
-        "100%";
-
-
-    /* ============================================================
-       VALUE INPUT
-       ============================================================ */
-
-    var valueInput =
-        document.createElement("input");
-
-    valueInput.id =
-        "stage6-value-input";
-
-    valueInput.type =
-        "text";
-
-    valueInput.placeholder =
-        "Type a value...";
-
-    valueInput.autocomplete =
-        "off";
-
-    valueInput.style.width =
-        "100%";
-
-    valueInput.style.height =
-        "38px";
-
-    valueInput.style.padding =
-        "7px 9px";
-
-    valueInput.style.border =
-        "1px solid #bbb";
-
-    valueInput.style.borderRadius =
-        "5px";
-
-    valueInput.style.fontSize =
-        "14px";
-
-    valueWrapper.appendChild(
-        valueInput
-    );
-
-
-    /* ============================================================
-       SUGGESTION BOX
-       ============================================================ */
-
-    var suggestionBox =
-        document.createElement("div");
-
-    suggestionBox.id =
-        "stage6-value-suggestions";
-
-    suggestionBox.style.position =
-        "absolute";
-
-    suggestionBox.style.left =
-        "0";
-
-    suggestionBox.style.right =
-        "0";
-
-    suggestionBox.style.top =
-        "40px";
-
-    suggestionBox.style.background =
-        "#ffffff";
-
-    suggestionBox.style.border =
-        "1px solid #ccc";
-
-    suggestionBox.style.borderRadius =
-        "0 0 6px 6px";
-
-    suggestionBox.style.maxHeight =
-        "220px";
-
-    suggestionBox.style.overflowY =
-        "auto";
-
-    suggestionBox.style.zIndex =
-        "10010";
-
-    suggestionBox.style.display =
-        "none";
-
-    suggestionBox.style.boxShadow =
-        "0 3px 8px rgba(0,0,0,0.20)";
-
-
-    valueWrapper.appendChild(
-        suggestionBox
-    );
-
-    searchPanel.appendChild(
-        valueWrapper
-    );
-
-
-    /* ============================================================
-       BUTTON ROW
-       ============================================================ */
-
-    var buttonRow =
-        document.createElement("div");
-
-    buttonRow.style.display =
-        "flex";
-
-    buttonRow.style.gap =
-        "6px";
-
-    buttonRow.style.marginTop =
-        "12px";
-
-
-    /* ============================================================
-       FIND BUTTON
-       ============================================================ */
-
-    var findButton =
-        document.createElement("button");
-
-    findButton.innerHTML =
-        "🔎 Find";
-
-    findButton.style.flex =
-        "1";
-
-    findButton.style.height =
-        "36px";
-
-    findButton.style.cursor =
-        "pointer";
-
-    findButton.style.border =
-        "1px solid #bbb";
-
-    findButton.style.borderRadius =
-        "5px";
-
-    findButton.style.background =
-        "#f5f5f5";
-
-
-    /* ============================================================
-       CLEAR BUTTON
-       ============================================================ */
-
-    var clearButton =
-        document.createElement("button");
-
-    clearButton.innerHTML =
-        "Clear";
-
-    clearButton.style.flex =
-        "1";
-
-    clearButton.style.height =
-        "36px";
-
-    clearButton.style.cursor =
-        "pointer";
-
-    clearButton.style.border =
-        "1px solid #bbb";
-
-    clearButton.style.borderRadius =
-        "5px";
-
-    clearButton.style.background =
-        "#f5f5f5";
-
-
-    buttonRow.appendChild(
-        findButton
-    );
-
-    buttonRow.appendChild(
-        clearButton
-    );
-
-    searchPanel.appendChild(
-        buttonRow
-    );
-
-
-    /* ============================================================
-       STATUS
-       ============================================================ */
-
-    var status =
-        document.createElement("div");
-
-    status.id =
-        "stage6-search-status";
-
-    status.style.marginTop =
-        "10px";
-
-    status.style.fontSize =
-        "12px";
-
-    status.style.color =
-        "#555";
-
-    status.style.lineHeight =
-        "18px";
-
-    searchPanel.appendChild(
-        status
-    );
-
-
-    /* ============================================================
-       OPEN / CLOSE SEARCH
-       ============================================================ */
-
-    searchButton.addEventListener(
-        "click",
-        function () {
-
-            if (
-                searchPanel.style.display ===
-                "none"
-            ) {
-
-                searchPanel.style.display =
-                    "block";
-
-                refreshLayerList();
-
-            } else {
-
-                searchPanel.style.display =
-                    "none";
-
-                hideSuggestions();
-            }
-
-        }
-    );
-
-
-    closeButton.addEventListener(
-        "click",
-        function () {
-
-            searchPanel.style.display =
-                "none";
-
-            hideSuggestions();
-
-        }
-    );
-
-
-    /* ============================================================
-       GET LAYER NAME
-       ============================================================ */
-
-  function getLayerName(layer) {
-
-    if (!layer) {
-        return null;
-    }
-
-    var name =
-        layer.get("popuplayertitle") ||
-        layer.get("title") ||
-        layer.get("name") ||
-        layer.get("layerName") ||
-        layer.get("file");
-
-    /*
-     * If there is no actual layer name,
-     * don't return "Unnamed Layer".
-     */
-    if (
-        name === undefined ||
-        name === null ||
-        String(name).trim() === ""
-    ) {
-        return null;
-    }
-
-    name = String(name).trim();
-
-    /*
-     * Ignore generic/internal layer names.
-     */
-    var ignoredNames = [
-        "layer",
-        "layer 1",
-        "layer 2",
-        "layer 3",
-        "layer 4",
-        "layer 5",
-        "unnamed layer",
-        "vector layer",
-        "vector"
-    ];
-
-    if (
-        ignoredNames.indexOf(
-            name.toLowerCase()
-        ) !== -1
-    ) {
-        return null;
-    }
-
-    return name;
-}
-
-    /* ============================================================
-       GET SEARCHABLE VECTOR LAYERS
-       ============================================================ */
-
-   function getSearchableLayers() {
-
-    var layers = [];
-
-    map.getLayers().forEach(function (layer) {
-
-        /*
-         * Don't search the Stage 6 highlight layer.
-         */
-        if (
-            layer === stage6HighlightLayer
-        ) {
-            return;
-        }
-
-        /*
-         * Only OpenLayers Vector layers.
-         */
-        if (
-            !(layer instanceof ol.layer.Vector)
-        ) {
-            return;
-        }
-
-        var source =
-            layer.getSource();
-
-        /*
-         * Source must contain features.
-         */
-        if (
-            !source ||
-            typeof source.getFeatures !== "function"
-        ) {
-            return;
-        }
-
-        /*
-         * Get actual layer name.
-         */
-        var layerName =
-            getLayerName(layer);
-
-        /*
-         * If the layer doesn't have a
-         * meaningful name, ignore it.
-         */
-        if (!layerName) {
-            return;
-        }
-
-        /*
-         * Ignore known internal/helper layers.
-         */
-        var excludedNames = [
-            "featureOverlay",
-            "measureLayer",
-            "geolocateOverlay",
-            "stage14MeasureLayer",
-            "stage14SnapLayer",
-            "highlight",
-            "selection",
-            "select",
-            "measure",
-            "geolocate"
-        ];
-
-        var lowerName =
-            layerName.toLowerCase();
-
-        var isExcluded =
-            excludedNames.some(function (excluded) {
-
-                return (
-                    lowerName.indexOf(
-                        excluded.toLowerCase()
-                    ) !== -1
-                );
-
-            });
-
-        if (isExcluded) {
-            return;
-        }
-
-        /*
-         * Ignore empty vector layers.
-         */
-        var features =
-            source.getFeatures();
-
-        if (
-            !features ||
-            features.length === 0
-        ) {
-            return;
-        }
-
-        /*
-         * This is a genuine searchable layer.
-         */
-        layers.push(layer);
-
-    });
-
-    return layers;
-}
-
-
-    /* ============================================================
-       REFRESH LAYER LIST
-       ============================================================ */
-
-    function refreshLayerList() {
-
-        var layers =
-            getSearchableLayers();
-
-
-        var oldLayerName =
-            layerSelect.options[
-                layerSelect.selectedIndex
-            ]
-                ? layerSelect.options[
-                    layerSelect.selectedIndex
-                ].textContent
-                : "";
-
-
-        layerSelect.innerHTML =
-            "";
-
-
-        if (
-            layers.length === 0
-        ) {
-
-            var emptyOption =
-                document.createElement(
-                    "option"
-                );
-
-            emptyOption.textContent =
-                "No vector layers found";
-
-            layerSelect.appendChild(
-                emptyOption
-            );
-
-            fieldSelect.innerHTML =
-                "";
-
-            hideSuggestions();
-
-            return;
-        }
-
-
-        layers.forEach(
-            function (layer, index) {
-
-                var option =
-                    document.createElement(
-                        "option"
-                    );
-
-                option.value =
-                    index;
-
-                option.textContent =
-                    getLayerName(layer);
-
-                layerSelect.appendChild(
-                    option
-                );
-
-            }
-        );
-
-
-        /*
-           Restore previous layer
-           if possible.
-        */
-
-        var restored =
-            false;
-
-
-        for (
-            var i = 0;
-            i < layers.length;
-            i++
-        ) {
-
-            if (
-                getLayerName(
-                    layers[i]
-                ) === oldLayerName
-            ) {
-
-                layerSelect.value =
-                    i;
-
-                restored =
-                    true;
-
-                break;
-            }
-        }
-
-
-        if (!restored) {
-
-            layerSelect.selectedIndex =
-                0;
-        }
-
-
-        updateFieldList();
-    }
-
-
-    /* ============================================================
-       GET SELECTED LAYER
-       ============================================================ */
-
-    function getSelectedLayer() {
-
-        var layers =
-            getSearchableLayers();
-
-
-        var index =
-            parseInt(
-                layerSelect.value,
-                10
-            );
-
-
-        if (
-            isNaN(index) ||
-            !layers[index]
-        ) {
-
-            return null;
-        }
-
-
-        return layers[index];
-    }
-
-
-    /* ============================================================
-       GET FIELDS
-       ============================================================ */
-
-    function getLayerFields(layer) {
-
-        if (!layer) {
-            return [];
-        }
-
-
-        var source =
-            layer.getSource();
-
-
-        if (!source) {
-            return [];
-        }
-
-
-        var features =
-            source.getFeatures();
-
-
-        var fieldSet =
-            new Set();
-
-
-        features.forEach(
-            function (feature) {
-
-                var properties =
-                    feature.getProperties();
-
-
-                Object.keys(
-                    properties
-                ).forEach(
-                    function (field) {
-
-                        if (
-                            field ===
-                            "geometry"
-                        ) {
-
-                            return;
-                        }
-
-
-                        if (
-                            field ===
-                            "layerObject"
-                        ) {
-
-                            return;
-                        }
-
-
-                        if (
-                            field ===
-                            "idO"
-                        ) {
-
-                            return;
-                        }
-
-
-                        fieldSet.add(
-                            field
-                        );
-
-                    }
-                );
-
-            }
-        );
-
-
-        var fields =
-            Array.from(fieldSet);
-
-
-        /*
-           Preferred survey fields first.
-        */
-
-        var preferredFields = [
-
-            "parcel_num",
-
-            "parcel_no",
-
-            "parcelno",
-
-            "lpm_no",
-
-            "lpmno",
-
-            "lp_no",
-
-            "survey_no",
-
-            "survey_no_",
-
-            "survey",
+            "Name",
 
             "name"
 
+        ],
+
+
+
+        preferredOwnerFields: [
+
+            "Owner_Name",
+
+            "Owner Name",
+
+            "Owner",
+
+            "Farmer_Name",
+
+            "Farmer Name",
+
+            "Pattadar",
+
+            "Pattadar_Name",
+
+            "Name",
+
+            "name"
+
+        ],
+
+
+
+        excludedLayerTerms: [
+
+            "highlight",
+
+            "search result",
+
+            "search_result",
+
+            "measurement",
+
+            "measure layer",
+
+            "drawing layer",
+
+            "sketch layer",
+
+            "temporary layer",
+
+            "temp layer"
+
+        ],
+
+
+
+        excludedFieldNames: [
+
+            "geometry"
+
+        ]
+
+    };
+
+
+
+    // Prevent duplicate initialization.
+
+    if (window.__STAGE6_SEARCH_PRO_INITIALIZED__) {
+
+        if (typeof window.refreshStage6Search === "function") {
+
+            window.refreshStage6Search();
+
+        }
+
+        return;
+
+    }
+
+
+
+    window.__STAGE6_SEARCH_PRO_INITIALIZED__ = true;
+
+
+
+    // --------------------------------------------------------
+
+    // MAP ACCESS
+
+    // --------------------------------------------------------
+
+
+
+    function getMap() {
+
+        if (window.map && typeof window.map.getLayers === "function") {
+
+            return window.map;
+
+        }
+
+
+
+        if (window.olMap &&
+
+            typeof window.olMap.getLayers === "function") {
+
+            return window.olMap;
+
+        }
+
+
+
+        try {
+
+            if (typeof map !== "undefined" &&
+
+                map &&
+
+                typeof map.getLayers === "function") {
+
+                return map;
+
+            }
+
+        } catch (error) {
+
+            // The map may not be exposed globally.
+
+        }
+
+
+
+        return null;
+
+    }
+
+
+
+    // --------------------------------------------------------
+
+    // SVG ICONS
+
+    // --------------------------------------------------------
+
+
+
+    const ICONS = {
+
+        search:
+
+            '<circle cx="11" cy="11" r="7"/>' +
+
+            '<path d="m16 16 4 4"/>',
+
+
+
+        close:
+
+            '<path d="m18 6-12 12M6 6l12 12"/>',
+
+
+
+        plus:
+
+            '<path d="M12 5v14M5 12h14"/>',
+
+
+
+        minus:
+
+            '<path d="M5 12h14"/>',
+
+
+
+        layers:
+
+            '<path d="m12 3 9 5-9 5-9-5 9-5Z"/>' +
+
+            '<path d="m3 12 9 5 9-5"/>' +
+
+            '<path d="m3 16 9 5 9-5"/>',
+
+
+
+        filter:
+
+            '<path d="M4 6h16M7 12h10M10 18h4"/>',
+
+
+
+        target:
+
+            '<circle cx="12" cy="12" r="8"/>' +
+
+            '<circle cx="12" cy="12" r="3"/>' +
+
+            '<path d="M12 2v2M12 20v2M2 12h2M20 12h2"/>',
+
+
+
+        zoom:
+
+            '<circle cx="10.5" cy="10.5" r="6.5"/>' +
+
+            '<path d="m15.5 15.5 5 5M10.5 7v7M7 10.5h7"/>',
+
+
+
+        zoomAll:
+
+            '<path d="M8 3H3v5M16 3h5v5M3 16v5h5M21 16v5h-5"/>' +
+
+            '<path d="M9 9h6v6H9z"/>',
+
+
+
+        trash:
+
+            '<path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/>' +
+
+            '<path d="M10 10v6M14 10v6"/>',
+
+
+
+        check:
+
+            '<path d="m5 12 4 4L19 6"/>',
+
+
+
+        chevron:
+
+            '<path d="m9 18 6-6-6-6"/>',
+
+
+
+        pin:
+
+            '<path d="M20 10c0 5-8 11-8 11S4 15 4 10a8 8 0 1 1 16 0Z"/>' +
+
+            '<circle cx="12" cy="10" r="2.5"/>',
+
+
+
+        refresh:
+
+            '<path d="M20 7v5h-5M4 17v-5h5"/>' +
+
+            '<path d="M5.6 9A7 7 0 0 1 17 5l3 2M4 17l3 2a7 7 0 0 0 11.4-4"/>',
+
+
+
+        info:
+
+            '<circle cx="12" cy="12" r="9"/>' +
+
+            '<path d="M12 11v5M12 8h.01"/>'
+
+    };
+
+
+
+    function icon(name, size) {
+
+        return (
+
+            '<svg xmlns="http://www.w3.org/2000/svg"' +
+
+            ' width="' + (size || 18) + '"' +
+
+            ' height="' + (size || 18) + '"' +
+
+            ' viewBox="0 0 24 24" fill="none"' +
+
+            ' stroke="currentColor" stroke-width="1.8"' +
+
+            ' stroke-linecap="round" stroke-linejoin="round"' +
+
+            ' aria-hidden="true">' +
+
+            (ICONS[name] || ICONS.info) +
+
+            '</svg>'
+
+        );
+
+    }
+
+
+
+    // --------------------------------------------------------
+
+    // INJECT LIGHT-THEME CSS
+
+    // --------------------------------------------------------
+
+
+
+
+
+function installStyles() {
+
+    if (document.getElementById(CONFIG.styleId)) return;
+
+
+
+    const style = document.createElement("style");
+
+    style.id = CONFIG.styleId;
+
+
+
+    style.textContent = `
+
+        #${CONFIG.buttonId},
+
+        #${CONFIG.panelId},
+
+        #${CONFIG.panelId} * {
+
+            box-sizing: border-box;
+
+        }
+
+
+
+        /* MAIN SEARCH BUTTON */
+
+        #${CONFIG.buttonId} {
+
+            position: fixed;
+
+            top: ${CONFIG.buttonTop}px;
+
+            left: 12px;
+
+            z-index: 2147483646 !important;
+
+            display: flex;
+
+            align-items: center;
+
+            justify-content: center;
+
+            gap: 8px;
+
+            height: 42px;
+
+            padding: 0 13px;
+
+            border: 1px solid #dbe5f0;
+
+            border-radius: 10px;
+
+            background: #fff;
+
+            color: #2463eb;
+
+            box-shadow: 0 2px 8px #172b4d18;
+
+            font: 600 12px system-ui, sans-serif;
+
+            cursor: pointer;
+
+            transition: .15s ease;
+
+        }
+
+
+
+        #${CONFIG.buttonId} svg {
+
+            width: 19px;
+
+            height: 19px;
+
+        }
+
+
+
+        #${CONFIG.buttonId}:hover {
+
+            background: #edf4ff;
+
+            border-color: #a9c7ff;
+
+            box-shadow: 0 3px 10px #2463eb22;
+
+        }
+
+
+
+        /* SEARCH PANEL */
+
+        #${CONFIG.panelId} {
+
+            position: fixed;
+
+            top: ${CONFIG.panelTop}px;
+
+            left: 12px;
+
+            z-index: 2147483647 !important;
+
+            display: none;
+
+            flex-direction: column;
+
+            width: min(360px, calc(100vw - 24px));
+
+            max-height: calc(100dvh - ${CONFIG.panelTop + 15}px);
+
+            overflow: hidden;
+
+            border: 1px solid #e0e6ef;
+
+            border-radius: 13px;
+
+            background: #fff;
+
+            color: #25364d;
+
+            box-shadow: 0 8px 28px #172b4d20;
+
+            font: 12px/1.45 system-ui, sans-serif;
+
+        }
+
+
+
+        #${CONFIG.panelId}.s6-open {
+
+            display: flex;
+
+        }
+
+
+
+        #${CONFIG.panelId} button,
+
+        #${CONFIG.panelId} input,
+
+        #${CONFIG.panelId} select {
+
+            box-sizing: border-box;
+
+            font: inherit;
+
+        }
+
+
+
+        /* SIMPLE HEADER */
+
+        #${CONFIG.panelId} .s6-header {
+
+            display: flex;
+
+            align-items: center;
+
+            gap: 10px;
+
+            padding: 12px;
+
+            border-bottom: 1px solid #edf0f5;
+
+        }
+
+
+
+        #${CONFIG.panelId} .s6-header-icon {
+
+            display: flex;
+
+            align-items: center;
+
+            justify-content: center;
+
+            width: 34px;
+
+            height: 34px;
+
+            flex-shrink: 0;
+
+            border-radius: 9px;
+
+            background: #edf4ff;
+
+            color: #2463eb;
+
+        }
+
+
+
+        #${CONFIG.panelId} .s6-heading {
+
+            flex: 1;
+
+            min-width: 0;
+
+        }
+
+
+
+        #${CONFIG.panelId} .s6-title {
+
+            margin: 0;
+
+            color: #172b4d;
+
+            font-size: 14px;
+
+            font-weight: 700;
+
+        }
+
+
+
+        #${CONFIG.panelId} .s6-subtitle {
+
+            margin-top: 2px;
+
+            color: #8190a4;
+
+            font-size: 10px;
+
+        }
+
+
+
+        /* ICON BUTTONS */
+
+        #${CONFIG.panelId} .s6-icon-button {
+
+            display: inline-flex;
+
+            align-items: center;
+
+            justify-content: center;
+
+            flex-shrink: 0;
+
+            width: 34px;
+
+            height: 34px;
+
+            padding: 0;
+
+            border: 1px solid transparent;
+
+            border-radius: 9px;
+
+            background: transparent;
+
+            color: #64748b;
+
+            cursor: pointer;
+
+            transition: .15s ease;
+
+        }
+
+
+
+        #${CONFIG.panelId} .s6-icon-button svg {
+
+            width: 18px;
+
+            height: 18px;
+
+        }
+
+
+
+        #${CONFIG.panelId} .s6-icon-button:hover {
+
+            border-color: #dce6f2;
+
+            background: #f1f6fc;
+
+            color: #2463eb;
+
+        }
+
+
+
+        /* SCROLLABLE CONTENT */
+
+        #${CONFIG.panelId} .s6-body {
+
+            padding: 12px;
+
+            overflow-y: auto;
+
+            overscroll-behavior: contain;
+
+        }
+
+
+
+        #${CONFIG.panelId} .s6-section {
+
+            margin-bottom: 14px;
+
+        }
+
+
+
+        #${CONFIG.panelId} .s6-section-heading {
+
+            display: flex;
+
+            align-items: center;
+
+            justify-content: space-between;
+
+            gap: 8px;
+
+            margin: 0 0 8px;
+
+            color: #52647c;
+
+            font-size: 11px;
+
+            font-weight: 700;
+
+        }
+
+
+
+        #${CONFIG.panelId} .s6-section-heading > span,
+
+        #${CONFIG.panelId} .s6-results-header > .s6-section-heading {
+
+            display: flex;
+
+            align-items: center;
+
+            gap: 6px;
+
+        }
+
+
+
+        #${CONFIG.panelId} .s6-section-heading svg {
+
+            width: 15px;
+
+            height: 15px;
+
+            color: #7186a2;
+
+        }
+
+
+
+        #${CONFIG.panelId} .s6-label {
+
+            display: block;
+
+            margin-bottom: 5px;
+
+            color: #78879a;
+
+            font-size: 10px;
+
+            font-weight: 600;
+
+        }
+
+
+
+        /* INPUTS */
+
+        #${CONFIG.panelId} .s6-layer-wrap {
+
+            padding: 0;
+
+            border: 0;
+
+            background: transparent;
+
+        }
+
+
+
+        #${CONFIG.panelId} .s6-select,
+
+        #${CONFIG.panelId} .s6-input {
+
+            display: block;
+
+            width: 100%;
+
+            min-width: 0;
+
+            height: 37px;
+
+            padding: 0 10px;
+
+            border: 1px solid #dce3ed;
+
+            border-radius: 8px;
+
+            outline: none;
+
+            background: #fff;
+
+            color: #263950;
+
+            font-size: 12px;
+
+            transition: border-color .15s, box-shadow .15s;
+
+        }
+
+
+
+        #${CONFIG.panelId} .s6-select:focus,
+
+        #${CONFIG.panelId} .s6-input:focus {
+
+            border-color: #6a9df8;
+
+            box-shadow: 0 0 0 3px #2463eb12;
+
+        }
+
+
+
+        #${CONFIG.panelId} .s6-input::placeholder {
+
+            color: #a3afbd;
+
+        }
+
+
+
+        /* CONDITIONS */
+
+        #${CONFIG.panelId} .s6-condition-list {
+
+            display: flex;
+
+            flex-direction: column;
+
+            gap: 8px;
+
+        }
+
+
+
+        #${CONFIG.panelId} .s6-condition {
+
+            padding: 10px;
+
+            border: 1px solid #e5eaf1;
+
+            border-radius: 10px;
+
+            background: #fafbfd;
+
+        }
+
+
+
+        #${CONFIG.panelId} .s6-condition-top {
+
+            display: flex;
+
+            align-items: center;
+
+            justify-content: space-between;
+
+            margin-bottom: 8px;
+
+        }
+
+
+
+        #${CONFIG.panelId} .s6-condition-number {
+
+            display: flex;
+
+            align-items: center;
+
+            gap: 7px;
+
+            color: #63758b;
+
+            font-size: 10px;
+
+            font-weight: 700;
+
+        }
+
+
+
+        #${CONFIG.panelId} .s6-number-dot {
+
+            display: inline-flex;
+
+            align-items: center;
+
+            justify-content: center;
+
+            width: 21px;
+
+            height: 21px;
+
+            border-radius: 6px;
+
+            background: #eaf2ff;
+
+            color: #2463eb;
+
+            font-size: 10px;
+
+        }
+
+
+
+        #${CONFIG.panelId} .s6-condition-fields {
+
+            display: grid;
+
+            grid-template-columns: minmax(0, 1fr) 105px;
+
+            gap: 8px;
+
+            margin-bottom: 8px;
+
+        }
+
+
+
+        #${CONFIG.panelId} .s6-value-row {
+
+            display: flex;
+
+            align-items: center;
+
+            gap: 7px;
+
+        }
+
+
+
+        #${CONFIG.panelId} .s6-suggestions {
+
+            margin-top: 5px;
+
+            overflow: hidden;
+
+            border: 1px solid #dce5f0;
+
+            border-radius: 8px;
+
+            background: #fff;
+
+        }
+
+
+
+        #${CONFIG.panelId} .s6-and-note {
+
+            display: flex;
+
+            align-items: center;
+
+            justify-content: center;
+
+            gap: 7px;
+
+            margin-top: 8px;
+
+            color: #8997a8;
+
+            font-size: 10px;
+
+        }
+
+
+
+        #${CONFIG.panelId} .s6-and-pill {
+
+            padding: 2px 6px;
+
+            border-radius: 4px;
+
+            background: #edf4ff;
+
+            color: #2463eb;
+
+            font-size: 9px;
+
+            font-weight: 800;
+
+        }
+
+
+
+        /* ALL ACTION BUTTONS */
+
+        #${CONFIG.panelId} .s6-btn {
+
+            display: inline-flex;
+
+            align-items: center;
+
+            justify-content: center;
+
+            gap: 7px;
+
+            min-height: 35px;
+
+            padding: 0 11px;
+
+            border: 1px solid #dce4ef;
+
+            border-radius: 8px;
+
+            background: #fff;
+
+            color: #53657d;
+
+            font-size: 11px;
+
+            font-weight: 650;
+
+            cursor: pointer;
+
+            transition: .15s ease;
+
+        }
+
+
+
+        #${CONFIG.panelId} .s6-btn svg {
+
+            width: 15px;
+
+            height: 15px;
+
+            flex-shrink: 0;
+
+        }
+
+
+
+        #${CONFIG.panelId} .s6-btn:hover {
+
+            border-color: #b8cbea;
+
+            background: #f5f8fd;
+
+            color: #2463eb;
+
+        }
+
+
+
+        #${CONFIG.panelId} .s6-btn-primary {
+
+            border-color: #2463eb;
+
+            background: #2463eb;
+
+            color: #fff;
+
+            box-shadow: 0 2px 5px #2463eb20;
+
+        }
+
+
+
+        #${CONFIG.panelId} .s6-btn-primary:hover {
+
+            border-color: #1756cf;
+
+            background: #1756cf;
+
+            color: #fff;
+
+        }
+
+
+
+        #${CONFIG.panelId} .s6-btn-soft {
+
+            border-color: #dce8fb;
+
+            background: #f1f6ff;
+
+            color: #2463eb;
+
+        }
+
+
+
+        #${CONFIG.panelId} .s6-btn-soft:hover {
+
+            background: #e5efff;
+
+        }
+
+
+
+        #${CONFIG.panelId} .s6-btn-small {
+
+            min-height: 30px;
+
+            padding: 0 8px;
+
+            font-size: 10px;
+
+        }
+
+
+
+        #${CONFIG.panelId} .s6-action-row {
+
+            display: flex;
+
+            gap: 7px;
+
+        }
+
+
+
+        #${CONFIG.panelId} .s6-action-row > .s6-btn {
+
+            flex: 1;
+
+        }
+
+
+
+        /* STATUS */
+
+        #${CONFIG.panelId} .s6-status {
+
+            display: flex;
+
+            align-items: flex-start;
+
+            gap: 7px;
+
+            padding: 9px 10px;
+
+            border: 1px solid #e1e8f1;
+
+            border-radius: 8px;
+
+            background: #f7f9fc;
+
+            color: #65768c;
+
+            font-size: 10px;
+
+            overflow-wrap: anywhere;
+
+        }
+
+
+
+        #${CONFIG.panelId} .s6-status svg {
+
+            flex-shrink: 0;
+
+            width: 15px;
+
+            height: 15px;
+
+            color: #6b8bb8;
+
+        }
+
+
+
+        #${CONFIG.panelId} .s6-status-success {
+
+            border-color: #ccebd9;
+
+            background: #f1fbf5;
+
+            color: #276749;
+
+        }
+
+
+
+        #${CONFIG.panelId} .s6-status-warning {
+
+            border-color: #f0dfba;
+
+            background: #fffaf0;
+
+            color: #8a5b17;
+
+        }
+
+
+
+        /* RESULTS */
+
+        #${CONFIG.panelId} .s6-results-header {
+
+            display: flex;
+
+            align-items: center;
+
+            justify-content: space-between;
+
+            gap: 8px;
+
+            margin-bottom: 8px;
+
+        }
+
+
+
+        #${CONFIG.panelId} .s6-result-count {
+
+            display: inline-flex;
+
+            align-items: center;
+
+            justify-content: center;
+
+            min-width: 25px;
+
+            height: 24px;
+
+            padding: 0 7px;
+
+            border-radius: 7px;
+
+            background: #eaf2ff;
+
+            color: #2463eb;
+
+            font-size: 11px;
+
+            font-weight: 800;
+
+        }
+
+
+
+        #${CONFIG.panelId} .s6-results {
+
+            display: flex;
+
+            flex-direction: column;
+
+            gap: 7px;
+
+        }
+
+
+
+        #${CONFIG.panelId} .s6-result-card {
+
+            display: block;
+
+            width: 100%;
+
+            padding: 10px;
+
+            border: 1px solid #e3e9f1;
+
+            border-radius: 9px;
+
+            background: #fff;
+
+            color: #263950;
+
+            text-align: left;
+
+            cursor: pointer;
+
+            transition: .15s ease;
+
+        }
+
+
+
+        #${CONFIG.panelId} .s6-result-card:hover {
+
+            border-color: #a9c7ff;
+
+            background: #f8fbff;
+
+            box-shadow: 0 2px 8px #2463eb10;
+
+        }
+
+
+
+        #${CONFIG.panelId} .s6-result-title-row {
+
+            display: flex;
+
+            align-items: flex-start;
+
+            gap: 8px;
+
+        }
+
+
+
+        #${CONFIG.panelId} .s6-result-pin {
+
+            display: flex;
+
+            flex-shrink: 0;
+
+            align-items: center;
+
+            justify-content: center;
+
+            width: 29px;
+
+            height: 29px;
+
+            border-radius: 8px;
+
+            background: #fff4e8;
+
+            color: #d97706;
+
+        }
+
+
+
+        #${CONFIG.panelId} .s6-result-pin svg {
+
+            width: 16px;
+
+            height: 16px;
+
+        }
+
+
+
+        #${CONFIG.panelId} .s6-result-main {
+
+            flex: 1;
+
+            min-width: 0;
+
+        }
+
+
+
+        #${CONFIG.panelId} .s6-result-title {
+
+            margin: 1px 0 3px;
+
+            color: #253a56;
+
+            font-size: 11px;
+
+            font-weight: 750;
+
+            overflow-wrap: anywhere;
+
+        }
+
+
+
+        #${CONFIG.panelId} .s6-result-owner {
+
+            color: #78899d;
+
+            font-size: 10px;
+
+            overflow-wrap: anywhere;
+
+        }
+
+
+
+        #${CONFIG.panelId} .s6-result-layer {
+
+            margin-top: 7px;
+
+            color: #98a4b3;
+
+            font-size: 9px;
+
+        }
+
+
+
+        #${CONFIG.panelId} .s6-result-details {
+
+            display: grid;
+
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+
+            gap: 5px;
+
+            margin-top: 8px;
+
+            padding-top: 8px;
+
+            border-top: 1px solid #edf0f5;
+
+        }
+
+
+
+        #${CONFIG.panelId} .s6-detail {
+
+            min-width: 0;
+
+            padding: 5px 6px;
+
+            border-radius: 6px;
+
+            background: #f7f9fc;
+
+        }
+
+
+
+        #${CONFIG.panelId} .s6-detail-label {
+
+            margin-bottom: 2px;
+
+            color: #91a0b1;
+
+            font-size: 9px;
+
+        }
+
+
+
+        #${CONFIG.panelId} .s6-detail-value {
+
+            color: #52647a;
+
+            font-size: 10px;
+
+            font-weight: 600;
+
+            overflow-wrap: anywhere;
+
+        }
+
+
+
+        #${CONFIG.panelId} .s6-empty {
+
+            padding: 20px 10px;
+
+            border: 1px dashed #dce4ef;
+
+            border-radius: 9px;
+
+            background: #fafbfd;
+
+            color: #8391a4;
+
+            text-align: center;
+
+        }
+
+
+
+        #${CONFIG.panelId} .s6-empty-icon {
+
+            display: flex;
+
+            justify-content: center;
+
+            margin-bottom: 7px;
+
+            color: #9aacc1;
+
+        }
+
+
+
+        #${CONFIG.panelId} .s6-empty-icon svg {
+
+            width: 25px;
+
+            height: 25px;
+
+        }
+
+
+
+        #${CONFIG.panelId} .s6-empty-title {
+
+            margin-bottom: 3px;
+
+            color: #53657c;
+
+            font-size: 11px;
+
+            font-weight: 700;
+
+        }
+
+
+
+        #${CONFIG.panelId} .s6-empty-text {
+
+            font-size: 10px;
+
+        }
+
+
+
+        /* FOOTER */
+
+        #${CONFIG.panelId} .s6-footer {
+
+            display: flex;
+
+            align-items: center;
+
+            justify-content: space-between;
+
+            gap: 8px;
+
+            padding: 8px 12px;
+
+            border-top: 1px solid #edf0f5;
+
+            background: #fafbfd;
+
+            color: #9aa6b5;
+
+            font-size: 9px;
+
+        }
+
+
+
+        #${CONFIG.panelId} .s6-footer strong {
+
+            color: #687990;
+
+            font-weight: 650;
+
+        }
+
+
+
+        /* KEYBOARD ACCESS */
+
+        #${CONFIG.panelId} button:focus-visible,
+
+        #${CONFIG.buttonId}:focus-visible,
+
+        #${CONFIG.panelId} input:focus-visible,
+
+        #${CONFIG.panelId} select:focus-visible {
+
+            outline: 2px solid #8bb5ff;
+
+            outline-offset: 2px;
+
+        }
+
+
+
+        @media (max-width: 650px) {
+
+            #${CONFIG.buttonId} {
+
+                left: 10px;
+
+            }
+
+
+
+            #${CONFIG.panelId} {
+
+                left: 10px;
+
+                width: min(350px, calc(100vw - 20px));
+
+                max-height: calc(100dvh - 352px);
+
+            }
+
+
+
+            #${CONFIG.panelId} .s6-select,
+
+            #${CONFIG.panelId} .s6-input {
+
+                height: 39px;
+
+            }
+
+
+
+            #${CONFIG.panelId} .s6-btn {
+
+                min-height: 38px;
+
+            }
+
+        }
+
+
+
+        @media (max-width: 360px) {
+
+            #${CONFIG.panelId} .s6-condition-fields {
+
+                grid-template-columns: minmax(0, 1fr) 92px;
+
+                gap: 6px;
+
+            }
+
+
+
+            #${CONFIG.panelId} .s6-result-details {
+
+                grid-template-columns: 1fr;
+
+            }
+
+        }
+
+
+
+        @media (prefers-reduced-motion: reduce) {
+
+            #${CONFIG.panelId} *,
+
+            #${CONFIG.buttonId} {
+
+                transition: none !important;
+
+                animation: none !important;
+
+            }
+
+        }
+
+    `;
+
+
+
+    document.head.appendChild(style);
+
+}
+
+
+
+
+
+    // --------------------------------------------------------
+
+    // LAYER DISCOVERY
+
+    // --------------------------------------------------------
+
+
+
+    function getAllLayers() {
+
+        const currentMap = getMap();
+
+        const output = [];
+
+
+
+        if (!currentMap) return output;
+
+
+
+        function walk(collection) {
+
+            if (!collection || typeof collection.forEach !== "function") {
+
+                return;
+
+            }
+
+
+
+            collection.forEach(function (layer) {
+
+                if (!layer || typeof layer.getSource !== "function") {
+
+                    return;
+
+                }
+
+
+
+                const source = layer.getSource();
+
+
+
+                if (layer.getLayers &&
+
+                    typeof layer.getLayers === "function") {
+
+                    walk(layer.getLayers());
+
+                    return;
+
+                }
+
+
+
+                if (source && typeof source.getFeatures === "function") {
+
+                    output.push(layer);
+
+                }
+
+            });
+
+        }
+
+
+
+        walk(currentMap.getLayers());
+
+
+
+        return output;
+
+    }
+
+
+
+    function getLayerName(layer) {
+
+        if (!layer || typeof layer.get !== "function") {
+
+            return "Unnamed layer";
+
+        }
+
+
+
+        const candidates = [
+
+            layer.get("popuplayertitle"),
+
+            layer.get("title"),
+
+            layer.get("name"),
+
+            layer.get("layerName"),
+
+            layer.get("layer_name"),
+
+            layer.get("file")
+
         ];
 
 
-        fields.sort(
-            function (a, b) {
 
-                var ai =
-                    preferredFields.indexOf(
-                        a.toLowerCase()
-                    );
+        for (let i = 0; i < candidates.length; i++) {
 
+            if (candidates[i] !== undefined &&
 
-                var bi =
-                    preferredFields.indexOf(
-                        b.toLowerCase()
-                    );
+                candidates[i] !== null &&
 
+                String(candidates[i]).trim() !== "") {
 
-                if (
-                    ai !== -1 &&
-                    bi === -1
-                ) {
-
-                    return -1;
-                }
-
-
-                if (
-                    ai === -1 &&
-                    bi !== -1
-                ) {
-
-                    return 1;
-                }
-
-
-                if (
-                    ai !== -1 &&
-                    bi !== -1
-                ) {
-
-                    return ai - bi;
-                }
-
-
-                return a.localeCompare(
-                    b,
-                    undefined,
-                    {
-                        sensitivity:
-                            "base"
-                    }
-                );
+                return String(candidates[i]).trim();
 
             }
-        );
 
-
-        return fields;
-    }
-
-
-    /* ============================================================
-       UPDATE FIELD LIST
-       ============================================================ */
-
-    function updateFieldList() {
-
-        hideSuggestions();
-
-
-        var layer =
-            getSelectedLayer();
-
-
-        fieldSelect.innerHTML =
-            "";
-
-
-        valueInput.value =
-            "";
-
-
-        status.innerHTML =
-            "";
-
-
-        if (!layer) {
-            return;
         }
 
 
-        var fields =
-            getLayerFields(layer);
 
-
-        fields.forEach(
-            function (field) {
-
-                var option =
-                    document.createElement(
-                        "option"
-                    );
-
-                option.value =
-                    field;
-
-                option.textContent =
-                    field;
-
-                fieldSelect.appendChild(
-                    option
-                );
-
-            }
-        );
+        return "";
 
     }
 
 
-    /* ============================================================
-       GET UNIQUE FIELD VALUES
-       ============================================================ */
 
-    function getFieldValues(
-        layer,
-        field
-    ) {
+    function isInternalLayer(layer) {
 
-        if (
-            !layer ||
-            !field
-        ) {
+        if (!layer) return true;
+
+
+
+        if (layer.get &&
+
+            (layer.get("dynamicSearchHighlight") === true ||
+
+             layer.get("stage6SearchHighlight") === true ||
+
+             layer.get("isSearchResultLayer") === true)) {
+
+            return true;
+
+        }
+
+
+
+        const name = getLayerName(layer).toLowerCase();
+
+
+
+        return CONFIG.excludedLayerTerms.some(function (term) {
+
+            return name.includes(term);
+
+        });
+
+    }
+
+
+
+    function getLayerFeatures(layer) {
+
+        try {
+
+            const source = layer.getSource();
+
+
+
+            if (!source || typeof source.getFeatures !== "function") {
+
+                return [];
+
+            }
+
+
+
+            return source.getFeatures();
+
+        } catch (error) {
 
             return [];
+
         }
 
-
-        var source =
-            layer.getSource();
+    }
 
 
-        if (!source) {
-            return [];
-        }
+
+    function getSearchableLayers() {
+
+        return getAllLayers().filter(function (layer) {
+
+            if (isInternalLayer(layer)) return false;
 
 
-        var features =
-            source.getFeatures();
+
+            const name = getLayerName(layer);
+
+            if (!name) return false;
 
 
-        var values = [];
 
-        var seen =
-            new Set();
+            const features = getLayerFeatures(layer);
 
 
-        features.forEach(
-            function (feature) {
 
-                var value =
-                    feature.get(field);
+            return features.some(function (feature) {
+
+                return feature &&
+
+                    typeof feature.getProperties === "function" &&
+
+                    Object.keys(feature.getProperties()).some(function (key) {
+
+                        return key !== "geometry";
+
+                    });
+
+            });
+
+        });
+
+    }
 
 
-                if (
-                    value === null ||
-                    value === undefined
-                ) {
+
+    function getFeatureFields(layer) {
+
+        const fields = new Set();
+
+
+
+        getLayerFeatures(layer).forEach(function (feature) {
+
+            if (!feature || typeof feature.getProperties !== "function") {
+
+                return;
+
+            }
+
+
+
+            Object.keys(feature.getProperties()).forEach(function (key) {
+
+                if (CONFIG.excludedFieldNames.includes(key.toLowerCase())) {
 
                     return;
+
                 }
 
 
-                var text =
-                    String(value).trim();
+
+                if (key.startsWith("_")) return;
 
 
-                if (!text) {
-                    return;
-                }
+
+                fields.add(key);
+
+            });
+
+        });
 
 
-                /*
-                   Remove duplicate values
-                   without changing the
-                   original displayed value.
-                */
 
-                var key =
-                    text.toLowerCase();
+        const values = Array.from(fields);
 
 
-                if (
-                    seen.has(key)
-                ) {
 
-                    return;
-                }
+        return values.sort(function (a, b) {
 
+            const ai = CONFIG.preferredFields.indexOf(a);
 
-                seen.add(key);
-
-                values.push(text);
-
-            }
-        );
+            const bi = CONFIG.preferredFields.indexOf(b);
 
 
-        return values;
+
+            if (ai !== -1 && bi !== -1) return ai - bi;
+
+            if (ai !== -1) return -1;
+
+            if (bi !== -1) return 1;
+
+
+
+            return a.localeCompare(b);
+
+        });
+
     }
 
 
-    /* ============================================================
-       NATURAL SORT
-       ============================================================ */
 
-    function naturalSort(a, b) {
+    // --------------------------------------------------------
 
-        var aText =
-            String(a).trim();
+    // UI CREATION
 
-        var bText =
-            String(b).trim();
+    // --------------------------------------------------------
 
 
-        var aNumber =
-            Number(aText);
 
-        var bNumber =
-            Number(bText);
+    installStyles();
 
 
-        var aIsNumber =
-            aText !== "" &&
-            isFinite(aNumber);
+
+    const searchButton = document.createElement("button");
+
+    searchButton.id = CONFIG.buttonId;
+
+    searchButton.type = "button";
+
+    searchButton.title = "Advanced attribute search";
+
+    searchButton.setAttribute("aria-label", "Open advanced attribute search");
+
+    searchButton.setAttribute("aria-expanded", "false");
+
+    searchButton.innerHTML = `
+
+    <svg
+
+        width="21"
+
+        height="21"
+
+        viewBox="0 0 24 24"
+
+        fill="none"
+
+        stroke="currentColor"
+
+        stroke-width="2"
+
+        stroke-linecap="round"
+
+        stroke-linejoin="round"
+
+        aria-hidden="true"
+
+    >
+
+        <circle cx="11" cy="11" r="7"></circle>
+
+        <path d="m20 20-4-4"></path>
+
+    </svg>
+
+`;
 
 
-        var bIsNumber =
-            bText !== "" &&
-            isFinite(bNumber);
+
+    const panel = document.createElement("section");
+
+    panel.id = CONFIG.panelId;
+
+    panel.setAttribute("aria-label", "Advanced attribute search");
 
 
-        /*
-           Numeric values:
-           1, 2, 3, 10, 20
-        */
 
-        if (
-            aIsNumber &&
-            bIsNumber
-        ) {
+    panel.innerHTML = `
 
-            return aNumber -
-                bNumber;
-        }
+        <div class="s6-header">
 
+            <div class="s6-header-icon">${icon("search", 21)}</div>
 
-        /*
-           Numbers before text
-           when mixed.
-        */
+            <div class="s6-heading">
 
-        if (
-            aIsNumber &&
-            !bIsNumber
-        ) {
+                <h2 class="s6-title">Advanced Search</h2>
 
-            return -1;
-        }
+                <div class="s6-subtitle">Find parcels by their attributes</div>
 
+            </div>
 
-        if (
-            !aIsNumber &&
-            bIsNumber
-        ) {
+            <button type="button" class="s6-icon-button"
 
-            return 1;
-        }
+                data-action="refresh" title="Refresh layers"
+
+                aria-label="Refresh layers">${icon("refresh", 18)}</button>
+
+            <button type="button" class="s6-icon-button"
+
+                data-action="close" title="Close search"
+
+                aria-label="Close search">${icon("close", 19)}</button>
+
+        </div>
 
 
-        /*
-           Alphabetical sorting.
-        */
 
-        return aText.localeCompare(
-            bText,
-            undefined,
-            {
-                numeric: true,
-                sensitivity: "base"
-            }
-        );
+        <div class="s6-body">
+
+            <div class="s6-section">
+
+                <div class="s6-section-heading">
+
+                    <span>${icon("layers", 15)} &nbsp;Search layer</span>
+
+                </div>
+
+                <div class="s6-layer-wrap">
+
+                    <label class="s6-label" for="s6-layer-select">
+
+                        Select parcel or attribute layer
+
+                    </label>
+
+                    <select id="s6-layer-select" class="s6-select">
+
+                        <option value="">Loading layers...</option>
+
+                    </select>
+
+                </div>
+
+            </div>
+
+
+
+            <div class="s6-section">
+
+                <div class="s6-section-heading">
+
+                    <span>${icon("filter", 15)} &nbsp;Search conditions</span>
+
+                    <button type="button" class="s6-btn s6-btn-soft s6-btn-small"
+
+                        data-action="add-condition">
+
+                        ${icon("plus", 14)} Add condition
+
+                    </button>
+
+                </div>
+
+
+
+                <div id="s6-condition-list" class="s6-condition-list"></div>
+
+
+
+                <div class="s6-and-note">
+
+                    <span class="s6-and-pill">AND</span>
+
+                    All entered conditions must match
+
+                </div>
+
+            </div>
+
+
+
+            <div class="s6-section">
+
+                <div class="s6-action-row">
+
+                    <button type="button" class="s6-btn"
+
+                        data-action="search">
+
+                        ${icon("search", 16)} Search parcels
+
+                    </button>
+
+                    <button type="button" class="s6-btn"
+
+                        data-action="clear">
+
+                        ${icon("trash", 15)} Clear
+
+                    </button>
+
+                </div>
+
+            </div>
+
+
+
+            <div id="s6-status" class="s6-status" role="status" aria-live="polite">
+
+                ${icon("info", 16)}
+
+                <span>Select a layer and enter a value to begin.</span>
+
+            </div>
+
+
+
+            <div class="s6-section" style="margin-top:16px">
+
+                <div class="s6-results-header">
+
+                    <div class="s6-section-heading" style="margin:0">
+
+                        ${icon("target", 15)} &nbsp;Search results
+
+                    </div>
+
+                    <span id="s6-result-count" class="s6-result-count">0</span>
+
+                </div>
+
+
+
+                <div class="s6-action-row" style="margin-bottom:10px">
+
+                    <button type="button" class="s6-btn s6-btn-soft s6-btn-small"
+
+                        data-action="zoom-all">
+
+                        ${icon("zoomAll", 14)} Zoom to all
+
+                    </button>
+
+                    <button type="button" class="s6-btn s6-btn-small"
+
+                        data-action="clear-highlight">
+
+                        ${icon("close", 14)} Clear highlight
+
+                    </button>
+
+                </div>
+
+
+
+                <div id="s6-results" class="s6-results">
+
+                    <div class="s6-empty">
+
+                        <div class="s6-empty-icon">${icon("search", 26)}</div>
+
+                        <div class="s6-empty-title">Ready to search</div>
+
+                        <div class="s6-empty-text">
+
+                            Enter a parcel number, survey number, owner name,
+
+                            or another attribute.
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+
+        <div class="s6-footer">
+
+            <span>GIS Survey Tools</span>
+
+            <strong>Advanced Attribute Search</strong>
+
+        </div>
+
+    `;
+
+
+
+    document.body.appendChild(searchButton);
+
+    document.body.appendChild(panel);
+
+    // Force this tool above ordinary map controls and custom survey panels.
+    // Inline !important protects it from later stylesheet rules.
+    searchButton.style.setProperty("z-index", "2147483646", "important");
+    panel.style.setProperty("z-index", "2147483647", "important");
+    searchButton.style.setProperty("position", "fixed", "important");
+    panel.style.setProperty("position", "fixed", "important");
+
+
+
+    const layerSelect = panel.querySelector("#s6-layer-select");
+
+    const conditionList = panel.querySelector("#s6-condition-list");
+
+    const statusBox = panel.querySelector("#s6-status");
+
+    const resultCount = panel.querySelector("#s6-result-count");
+
+    const resultsBox = panel.querySelector("#s6-results");
+
+
+
+    let conditionCounter = 0;
+
+    let currentResults = [];
+
+    let highlightLayer = null;
+
+    let mapClickListener = null;
+
+
+
+    // --------------------------------------------------------
+
+    // SAFE DOM HELPERS
+
+    // --------------------------------------------------------
+
+
+
+    function escapeHTML(value) {
+
+        return String(value == null ? "" : value)
+
+            .replace(/&/g, "&amp;")
+
+            .replace(/</g, "&lt;")
+
+            .replace(/>/g, "&gt;")
+
+            .replace(/"/g, "&quot;")
+
+            .replace(/'/g, "&#39;");
+
     }
 
 
-    /* ============================================================
-       HIDE SUGGESTIONS
-       ============================================================ */
 
-    function hideSuggestions() {
+    function normalise(value) {
 
-        suggestionBox.style.display =
-            "none";
+        return String(value == null ? "" : value)
 
-        suggestionBox.innerHTML =
-            "";
+            .trim()
+
+            .toLocaleLowerCase();
+
     }
 
 
-    /* ============================================================
-       SHOW SUGGESTIONS
-       ============================================================ */
 
-    function showSuggestions(
-        values
-    ) {
+    function valueToString(value) {
 
-        suggestionBox.innerHTML =
-            "";
+        if (value === null || value === undefined) return "";
 
 
-        if (
-            !values ||
-            values.length === 0
-        ) {
 
-            hideSuggestions();
+        if (typeof value === "object") {
 
-            return;
+            if (value instanceof Date) return value.toISOString();
+
+            return "";
+
         }
 
 
-        /*
-           IMPORTANT:
-           Maximum 10 suggestions.
-        */
 
-        var displayValues =
-            values.slice(0, 10);
+        return String(value);
 
-
-        displayValues.forEach(
-            function (value) {
-
-                var item =
-                    document.createElement(
-                        "div"
-                    );
-
-
-                item.textContent =
-                    value;
-
-
-                item.style.padding =
-                    "8px 10px";
-
-
-                item.style.cursor =
-                    "pointer";
-
-
-                item.style.fontSize =
-                    "13px";
-
-
-                item.style.borderBottom =
-                    "1px solid #eee";
-
-
-                item.style.whiteSpace =
-                    "nowrap";
-
-
-                item.style.overflow =
-                    "hidden";
-
-
-                item.style.textOverflow =
-                    "ellipsis";
-
-
-                item.addEventListener(
-                    "mouseenter",
-                    function () {
-
-                        item.style.background =
-                            "#f0f0f0";
-
-                    }
-                );
-
-
-                item.addEventListener(
-                    "mouseleave",
-                    function () {
-
-                        item.style.background =
-                            "#ffffff";
-
-                    }
-                );
-
-
-                /*
-                   Select suggestion.
-                */
-
-                item.addEventListener(
-                    "mousedown",
-                    function (event) {
-
-                        event.preventDefault();
-
-
-                        valueInput.value =
-                            value;
-
-
-                        hideSuggestions();
-
-                    }
-                );
-
-
-                suggestionBox.appendChild(
-                    item
-                );
-
-            }
-        );
-
-
-        suggestionBox.style.display =
-            "block";
     }
 
 
-    /* ============================================================
-       UPDATE SUGGESTIONS
-       ============================================================ */
 
-    function updateSuggestions() {
+    function setStatus(message, type) {
 
-        var layer =
-            getSelectedLayer();
+        statusBox.className = "s6-status";
 
 
-        var field =
-            fieldSelect.value;
 
+        if (type === "success") {
 
-        if (
-            !layer ||
-            !field
-        ) {
+            statusBox.classList.add("s6-status-success");
 
-            hideSuggestions();
+        } else if (type === "warning") {
 
-            return;
+            statusBox.classList.add("s6-status-warning");
+
         }
 
 
-        /*
-           IMPORTANT:
-           Don't show suggestions until
-           the user actually types.
-        */
 
-        var typed =
-            valueInput.value
-                .trim()
-                .toLowerCase();
+        statusBox.innerHTML =
+
+            icon(type === "success" ? "check" : "info", 16) +
+
+            "<span>" + escapeHTML(message) + "</span>";
+
+    }
 
 
-        if (!typed) {
 
-            hideSuggestions();
+    function showEmpty(title, message) {
 
-            return;
+        resultsBox.innerHTML = `
+
+            <div class="s6-empty">
+
+                <div class="s6-empty-icon">${icon("search", 26)}</div>
+
+                <div class="s6-empty-title">${escapeHTML(title)}</div>
+
+                <div class="s6-empty-text">${escapeHTML(message)}</div>
+
+            </div>
+
+        `;
+
+    }
+
+
+
+    // --------------------------------------------------------
+
+    // LAYER SELECTOR
+
+    // --------------------------------------------------------
+
+
+
+    function getSelectedLayer() {
+
+        const id = layerSelect.value;
+
+
+
+        return getSearchableLayers().find(function (layer) {
+
+            return String(getLayerUid(layer)) === id;
+
+        }) || null;
+
+    }
+
+
+
+    const layerIds = new WeakMap();
+
+    let nextLayerId = 1;
+
+
+
+    function getLayerUid(layer) {
+
+        if (!layerIds.has(layer)) {
+
+            layerIds.set(layer, nextLayerId++);
+
         }
 
 
-        var allValues =
-            getFieldValues(
-                layer,
-                field
+
+        return layerIds.get(layer);
+
+    }
+
+
+
+    function refreshLayers() {
+
+        const previousId = layerSelect.value;
+
+        const layers = getSearchableLayers();
+
+
+
+        layerSelect.innerHTML = "";
+
+
+
+        if (!layers.length) {
+
+            layerSelect.innerHTML =
+
+                '<option value="">No searchable vector layers found</option>';
+
+
+
+            conditionList.innerHTML = "";
+
+            setStatus(
+
+                "No named vector layers with searchable attributes were found.",
+
+                "warning"
+
             );
 
-
-        /*
-           Sort all values first.
-        */
-
-        allValues.sort(
-            naturalSort
-        );
-
-
-        /*
-           Find values containing
-           the typed text.
-        */
-
-        var filtered =
-            allValues.filter(
-                function (value) {
-
-                    return String(value)
-                        .toLowerCase()
-                        .indexOf(typed) !== -1;
-
-                }
-            );
-
-
-        /*
-           Maximum 10 suggestions.
-        */
-
-        filtered =
-            filtered.slice(0, 10);
-
-
-        if (
-            filtered.length === 0
-        ) {
-
-            hideSuggestions();
-
             return;
-        }
-
-
-        showSuggestions(
-            filtered
-        );
-    }
-
-
-    /* ============================================================
-       LAYER CHANGE
-       ============================================================ */
-
-    layerSelect.addEventListener(
-        "change",
-        function () {
-
-            stage6HighlightSource.clear();
-
-            status.innerHTML = "";
-
-            updateFieldList();
 
         }
-    );
 
 
-    /* ============================================================
-       FIELD CHANGE
-       ============================================================ */
 
-    fieldSelect.addEventListener(
-        "change",
-        function () {
+        layers.forEach(function (layer) {
 
-            valueInput.value =
-                "";
+            const option = document.createElement("option");
 
-            stage6HighlightSource.clear();
+            option.value = String(getLayerUid(layer));
 
-            status.innerHTML =
-                "";
+            option.textContent = getLayerName(layer);
 
-            hideSuggestions();
+            layerSelect.appendChild(option);
 
-        }
-    );
+        });
 
 
-    /* ============================================================
-       TYPING
-       ============================================================ */
 
-    valueInput.addEventListener(
-        "input",
-        function () {
+        if (layers.some(function (layer) {
 
-            updateSuggestions();
+            return String(getLayerUid(layer)) === previousId;
 
-        }
-    );
+        })) {
 
-
-    /* ============================================================
-       FOCUS
-       ============================================================ */
-
-    valueInput.addEventListener(
-        "focus",
-        function () {
-
-            /*
-               Only show if there is already
-               text in the box.
-            */
-
-            if (
-                valueInput.value.trim()
-            ) {
-
-                updateSuggestions();
-            }
-
-        }
-    );
-
-
-    /* ============================================================
-       BLUR
-       ============================================================ */
-
-    valueInput.addEventListener(
-        "blur",
-        function () {
-
-            setTimeout(
-                function () {
-
-                    hideSuggestions();
-
-                },
-                200
-            );
-
-        }
-    );
-
-
-    /* ============================================================
-       PERFORM SEARCH
-       ============================================================ */
-
-    function performSearch() {
-
-        hideSuggestions();
-
-
-        var layer =
-            getSelectedLayer();
-
-
-        var field =
-            fieldSelect.value;
-
-
-        var searchValue =
-            valueInput.value.trim();
-
-
-        stage6HighlightSource.clear();
-
-
-        if (!layer) {
-
-            status.innerHTML =
-                "⚠ No vector layer selected.";
-
-            return;
-        }
-
-
-        if (!field) {
-
-            status.innerHTML =
-                "⚠ Please select a field.";
-
-            return;
-        }
-
-
-        if (!searchValue) {
-
-            status.innerHTML =
-                "⚠ Please enter a search value.";
-
-            return;
-        }
-
-
-        var source =
-            layer.getSource();
-
-
-        var features =
-            source.getFeatures();
-
-
-        var searchLower =
-            searchValue.toLowerCase();
-
-
-        var exactMatches = [];
-
-        var partialMatches = [];
-
-
-        features.forEach(
-            function (feature) {
-
-                var value =
-                    feature.get(field);
-
-
-                if (
-                    value === null ||
-                    value === undefined
-                ) {
-
-                    return;
-                }
-
-
-                var text =
-                    String(value).trim();
-
-
-                var lower =
-                    text.toLowerCase();
-
-
-                /*
-                   Exact match.
-                */
-
-                if (
-                    lower ===
-                    searchLower
-                ) {
-
-                    exactMatches.push(
-                        feature
-                    );
-
-                    return;
-                }
-
-
-                /*
-                   Partial match.
-                */
-
-                if (
-                    lower.indexOf(
-                        searchLower
-                    ) !== -1
-                ) {
-
-                    partialMatches.push(
-                        feature
-                    );
-                }
-
-            }
-        );
-
-
-        /*
-           Exact results have priority.
-        */
-
-        var matches =
-            exactMatches.length > 0
-                ? exactMatches
-                : partialMatches;
-
-
-        if (
-            matches.length === 0
-        ) {
-
-            status.innerHTML =
-                "❌ No matching features found.";
-
-            return;
-        }
-
-
-        /* ========================================================
-           HIGHLIGHT
-           ======================================================== */
-
-        var extent =
-            ol.extent.createEmpty();
-
-
-        matches.forEach(
-            function (feature) {
-
-                var clone =
-                    feature.clone();
-
-
-                stage6HighlightSource
-                    .addFeature(
-                        clone
-                    );
-
-
-                var geometry =
-                    clone.getGeometry();
-
-
-                if (geometry) {
-
-                    ol.extent.extend(
-                        extent,
-                        geometry.getExtent()
-                    );
-                }
-
-            }
-        );
-
-
-        /* ========================================================
-           ZOOM
-           ======================================================== */
-
-        if (
-            !ol.extent.isEmpty(
-                extent
-            )
-        ) {
-
-            var view =
-                map.getView();
-
-
-            if (
-                matches.length === 1
-            ) {
-
-                view.fit(
-                    extent,
-                    {
-                        padding: [
-                            120,
-                            120,
-                            120,
-                            120
-                        ],
-
-                        maxZoom: 19,
-
-                        duration: 700
-                    }
-                );
-
-            } else {
-
-                view.fit(
-                    extent,
-                    {
-                        padding: [
-                            120,
-                            120,
-                            120,
-                            120
-                        ],
-
-                        maxZoom: 17,
-
-                        duration: 700
-                    }
-                );
-            }
+            layerSelect.value = previousId;
 
         }
 
 
-        /* ========================================================
-           STATUS
-           ======================================================== */
 
-        if (
-            exactMatches.length > 0
-        ) {
+        if (!layerSelect.value && layers.length) {
 
-            status.innerHTML =
-                "✅ " +
-                exactMatches.length +
-                " exact match" +
-                (
-                    exactMatches.length !== 1
-                        ? "es"
-                        : ""
-                ) +
-                " found.";
+            layerSelect.value = String(getLayerUid(layers[0]));
+
+        }
+
+
+
+        if (!conditionList.children.length) {
+
+            addCondition();
 
         } else {
 
-            status.innerHTML =
-                "🔎 " +
-                partialMatches.length +
-                " partial match" +
-                (
-                    partialMatches.length !== 1
-                        ? "es"
-                        : ""
-                ) +
-                " found.";
+            updateAllConditionFields();
+
+        }
+
+
+
+        setStatus(
+
+            layers.length + " searchable layer(s) available.",
+
+            "success"
+
+        );
+
+    }
+
+
+
+    // --------------------------------------------------------
+
+    // CONDITION BUILDER
+
+    // --------------------------------------------------------
+
+
+
+    function createOption(value, label, selected) {
+
+        return (
+
+            '<option value="' + escapeHTML(value) + '"' +
+
+            (selected ? " selected" : "") + ">" +
+
+            escapeHTML(label) + "</option>"
+
+        );
+
+    }
+
+
+
+    function addCondition() {
+
+        const layer = getSelectedLayer();
+
+
+
+        if (!layer) {
+
+            setStatus("Select a searchable layer first.", "warning");
+
+            return;
+
+        }
+
+
+
+        if (conditionList.children.length >= 8) {
+
+            setStatus("You can add up to 8 search conditions.", "warning");
+
+            return;
+
+        }
+
+
+
+        conditionCounter++;
+
+
+
+        const row = document.createElement("div");
+
+        row.className = "s6-condition";
+
+        row.dataset.conditionId = String(conditionCounter);
+
+
+
+        row.innerHTML = `
+
+            <div class="s6-condition-top">
+
+                <span class="s6-condition-number">
+
+                    <span class="s6-number-dot">${conditionList.children.length + 1}</span>
+
+                    Condition
+
+                </span>
+
+                <button type="button" class="s6-icon-button"
+
+                    data-action="remove-condition"
+
+                    title="Remove condition"
+
+                    aria-label="Remove condition">
+
+                    ${icon("minus", 17)}
+
+                </button>
+
+            </div>
+
+
+
+            <div class="s6-condition-fields">
+
+                <div>
+
+                    <label class="s6-label">Attribute field</label>
+
+                    <select class="s6-select s6-field-select"></select>
+
+                </div>
+
+                <div>
+
+                    <label class="s6-label">Match type</label>
+
+                    <select class="s6-select s6-operator-select">
+
+                        ${createOption("exact", "Exact match", true)}
+
+                        ${createOption("contains", "Contains", false)}
+
+                        ${createOption("starts", "Starts with", false)}
+
+                        ${createOption("ends", "Ends with", false)}
+
+                    </select>
+
+                </div>
+
+            </div>
+
+
+
+            <label class="s6-label">Search value</label>
+
+            <input type="text" class="s6-input s6-value-input"
+
+                placeholder="Type a value to search..."
+
+                autocomplete="off" spellcheck="false" />
+
+
+
+            <div class="s6-suggestions" hidden></div>
+
+        `;
+
+
+
+        conditionList.appendChild(row);
+
+
+
+        updateConditionFields(row);
+
+        renumberConditions();
+
+
+
+        const valueInput = row.querySelector(".s6-value-input");
+
+
+
+        valueInput.addEventListener("input", function () {
+
+            updateSuggestions(row);
+
+        });
+
+
+
+        valueInput.addEventListener("keydown", function (event) {
+
+            if (event.key === "Enter") {
+
+                event.preventDefault();
+
+                runSearch();
+
+            }
+
+
+
+            if (event.key === "Escape") {
+
+                hideSuggestions(row);
+
+            }
+
+        });
+
+
+
+        valueInput.addEventListener("blur", function () {
+
+            // Allow a suggestion click to register before hiding.
+
+            window.setTimeout(function () {
+
+                hideSuggestions(row);
+
+            }, 150);
+
+        });
+
+
+
+        row.querySelector(".s6-field-select").addEventListener(
+
+            "change",
+
+            function () {
+
+                updateSuggestions(row);
+
+            }
+
+        );
+
+
+
+        row.querySelector(".s6-operator-select").addEventListener(
+
+            "change",
+
+            function () {
+
+                updateSuggestions(row);
+
+            }
+
+        );
+
+
+
+        return row;
+
+    }
+
+
+
+    function renumberConditions() {
+
+        Array.from(conditionList.children).forEach(function (row, index) {
+
+            const dot = row.querySelector(".s6-number-dot");
+
+            if (dot) dot.textContent = String(index + 1);
+
+        });
+
+    }
+
+
+
+    function updateConditionFields(row) {
+
+        const layer = getSelectedLayer();
+
+        const fieldSelect = row.querySelector(".s6-field-select");
+
+
+
+        if (!layer) {
+
+            fieldSelect.innerHTML = '<option value="">No fields</option>';
+
+            return;
+
+        }
+
+
+
+        const previousField = fieldSelect.value;
+
+        const fields = getFeatureFields(layer);
+
+
+
+        fieldSelect.innerHTML = "";
+
+
+
+        if (!fields.length) {
+
+            fieldSelect.innerHTML = '<option value="">No fields</option>';
+
+            return;
+
+        }
+
+
+
+        fields.forEach(function (field) {
+
+            fieldSelect.appendChild(
+
+                new Option(field, field)
+
+            );
+
+        });
+
+
+
+        if (fields.includes(previousField)) {
+
+            fieldSelect.value = previousField;
+
+        } else {
+
+            const preferred = fields.find(function (field) {
+
+                return CONFIG.preferredFields.includes(field);
+
+            });
+
+
+
+            fieldSelect.value = preferred || fields[0];
+
         }
 
     }
 
 
-    /* ============================================================
-       FIND BUTTON
-       ============================================================ */
 
-    findButton.addEventListener(
-        "click",
-        function () {
+    function updateAllConditionFields() {
 
-            performSearch();
+        Array.from(conditionList.children).forEach(function (row) {
 
-        }
-    );
+            updateConditionFields(row);
+
+            hideSuggestions(row);
+
+        });
+
+    }
 
 
-    /* ============================================================
-       CLEAR
-       ============================================================ */
 
-    clearButton.addEventListener(
-        "click",
-        function () {
+    function hideSuggestions(row) {
 
-            valueInput.value =
-                "";
+        const box = row.querySelector(".s6-suggestions");
 
-            stage6HighlightSource.clear();
 
-            status.innerHTML =
-                "";
 
-            hideSuggestions();
+        if (box) {
+
+            box.hidden = true;
+
+            box.innerHTML = "";
 
         }
-    );
+
+    }
 
 
-    /* ============================================================
-       ENTER KEY
-       ============================================================ */
 
-    valueInput.addEventListener(
-        "keydown",
-        function (event) {
+    // --------------------------------------------------------
 
-            if (
-                event.key === "Enter"
-            ) {
+    // AUTOCOMPLETE — MAXIMUM 10 SUGGESTIONS
+
+    // --------------------------------------------------------
+
+
+
+    function getConditionValues(row) {
+
+        const layer = getSelectedLayer();
+
+        const field = row.querySelector(".s6-field-select").value;
+
+
+
+        if (!layer || !field) return [];
+
+
+
+        const unique = new Map();
+
+
+
+        getLayerFeatures(layer).forEach(function (feature) {
+
+            const value = valueToString(feature.get(field)).trim();
+
+
+
+            if (!value) return;
+
+
+
+            const key = normalise(value);
+
+
+
+            if (!unique.has(key)) {
+
+                unique.set(key, value);
+
+            }
+
+        });
+
+
+
+        return Array.from(unique.values()).sort(function (a, b) {
+
+            return a.localeCompare(b, undefined, {
+
+                numeric: true,
+
+                sensitivity: "base"
+
+            });
+
+        });
+
+    }
+
+
+
+    function updateSuggestions(row) {
+
+        const input = row.querySelector(".s6-value-input");
+
+        const box = row.querySelector(".s6-suggestions");
+
+        const query = normalise(input.value);
+
+
+
+        box.innerHTML = "";
+
+
+
+        if (!query) {
+
+            box.hidden = true;
+
+            return;
+
+        }
+
+
+
+        const values = getConditionValues(row)
+
+            .filter(function (value) {
+
+                return normalise(value).includes(query);
+
+            })
+
+            .slice(0, CONFIG.maxSuggestions);
+
+
+
+        if (!values.length) {
+
+            box.hidden = true;
+
+            return;
+
+        }
+
+
+
+        box.style.cssText =
+
+            "margin-top:6px;border:1px solid #dce5f0;" +
+
+            "border-radius:9px;background:#fff;overflow:hidden;" +
+
+            "box-shadow:0 5px 16px rgba(25,45,75,.08);";
+
+
+
+        values.forEach(function (value) {
+
+            const item = document.createElement("button");
+
+            item.type = "button";
+
+            item.className = "s6-suggestion-item";
+
+            item.style.cssText =
+
+                "display:block;width:100%;padding:9px 10px;" +
+
+                "border:0;border-bottom:1px solid #edf1f6;" +
+
+                "background:#fff;color:#304761;text-align:left;" +
+
+                "font-size:12px;cursor:pointer;overflow-wrap:anywhere;";
+
+
+
+            item.textContent = value;
+
+
+
+            item.addEventListener("mouseenter", function () {
+
+                item.style.background = "#f0f6ff";
+
+            });
+
+
+
+            item.addEventListener("mouseleave", function () {
+
+                item.style.background = "#fff";
+
+            });
+
+
+
+            item.addEventListener("mousedown", function (event) {
 
                 event.preventDefault();
 
-                performSearch();
+                input.value = value;
 
-            }
+                hideSuggestions(row);
+
+                input.focus();
+
+            });
 
 
-            if (
-                event.key === "Escape"
-            ) {
 
-                hideSuggestions();
+            box.appendChild(item);
+
+        });
+
+
+
+        box.hidden = false;
+
+    }
+
+
+
+    // --------------------------------------------------------
+
+    // SEARCH CONDITIONS
+
+    // --------------------------------------------------------
+
+
+
+    function readConditions() {
+
+        return Array.from(conditionList.children)
+
+            .map(function (row) {
+
+                return {
+
+                    field: row.querySelector(".s6-field-select").value,
+
+                    operator: row.querySelector(".s6-operator-select").value,
+
+                    value: row.querySelector(".s6-value-input").value.trim()
+
+                };
+
+            })
+
+            .filter(function (condition) {
+
+                return condition.field && condition.value !== "";
+
+            });
+
+    }
+
+
+
+    function matchesCondition(feature, condition) {
+
+        const actual = normalise(feature.get(condition.field));
+
+        const expected = normalise(condition.value);
+
+
+
+        if (!expected) return true;
+
+
+
+        switch (condition.operator) {
+
+            case "contains":
+
+                return actual.includes(expected);
+
+
+
+            case "starts":
+
+                return actual.startsWith(expected);
+
+
+
+            case "ends":
+
+                return actual.endsWith(expected);
+
+
+
+            case "exact":
+
+            default:
+
+                return actual === expected;
+
+        }
+
+    }
+
+
+
+    function runSearch() {
+
+        const layer = getSelectedLayer();
+
+        const conditions = readConditions();
+
+
+
+        Array.from(conditionList.children).forEach(hideSuggestions);
+
+
+
+        if (!layer) {
+
+            setStatus("Please select a searchable layer.", "warning");
+
+            return;
+
+        }
+
+
+
+        if (!conditions.length) {
+
+            setStatus("Enter at least one search value.", "warning");
+
+            return;
+
+        }
+
+
+
+        clearHighlights();
+
+
+
+        const features = getLayerFeatures(layer);
+
+
+
+        currentResults = features.filter(function (feature) {
+
+            return conditions.every(function (condition) {
+
+                return matchesCondition(feature, condition);
+
+            });
+
+        });
+        renderResults(currentResults, layer);
+
+
+
+        if (!currentResults.length) {
+
+            setStatus(
+
+                "No parcels matched all entered conditions. Try Contains or check the value.",
+
+                "warning"
+
+            );
+
+            return;
+
+        }
+
+
+
+        const modeText = conditions.map(function (condition) {
+
+            return condition.field + " (" + condition.operator + ")";
+
+        }).join(" + ");
+
+
+
+        setStatus(
+
+            currentResults.length +
+
+            " matching feature(s) found using " + modeText + ".",
+
+            "success"
+
+        );
+
+
+
+        drawHighlights(currentResults);
+
+        // Automatically zoom to all matching parcels.
+        requestAnimationFrame(function () {
+            zoomToAll();
+        });
+
+    }
+
+
+
+    // --------------------------------------------------------
+
+    // RESULT CARDS
+
+    // --------------------------------------------------------
+
+
+
+    function findProperty(feature, fieldCandidates) {
+
+        const properties = feature.getProperties();
+
+
+
+        for (let i = 0; i < fieldCandidates.length; i++) {
+
+            const key = fieldCandidates[i];
+
+
+
+            if (properties[key] !== undefined &&
+
+                properties[key] !== null &&
+
+                String(properties[key]).trim() !== "") {
+
+                return {
+
+                    key: key,
+
+                    value: valueToString(properties[key])
+
+                };
 
             }
 
         }
-    );
 
 
-    /* ============================================================
-       CLICK OUTSIDE
-       ============================================================ */
 
-    document.addEventListener(
-        "mousedown",
-        function (event) {
+        return null;
 
-            if (
-                !valueWrapper.contains(
-                    event.target
-                )
-            ) {
+    }
 
-                hideSuggestions();
 
-            }
+
+    function getTitleForFeature(feature) {
+
+        const preferred = findProperty(
+
+            feature,
+
+            CONFIG.preferredTitleFields
+
+        );
+
+
+
+        if (preferred) return preferred.value;
+
+
+
+        const properties = feature.getProperties();
+
+
+
+        for (const key of Object.keys(properties)) {
+
+            if (key === "geometry") continue;
+
+
+
+            const value = valueToString(properties[key]).trim();
+
+
+
+            if (value) return value;
 
         }
-    );
 
 
-    /* ============================================================
-       AUTOMATIC LAYER REFRESH
-       ============================================================ */
 
-    var previousLayerCount =
-        -1;
+        return "Untitled feature";
+
+    }
 
 
-    setInterval(
-        function () {
 
-            if (
-                searchPanel.style.display ===
-                "none"
-            ) {
+    function getOwnerForFeature(feature) {
+
+        const owner = findProperty(
+
+            feature,
+
+            CONFIG.preferredOwnerFields
+
+        );
+
+
+
+        return owner ? owner.value : "";
+
+    }
+
+
+
+    function getDetailFields(feature) {
+
+        const properties = feature.getProperties();
+
+        const output = [];
+
+
+
+        const preferred = [
+
+            "Sy.No",
+
+            "Sy.No.",
+
+            "Survey No",
+
+            "Survey_No",
+
+            "Katha No",
+
+            "LPM No",
+
+            "LP No",
+
+            "Extent",
+
+            "LPM Extent",
+
+            "Name",
+
+            "Owner",
+
+            "Village",
+
+            "Mandal"
+
+        ];
+
+
+
+        preferred.forEach(function (field) {
+
+            if (output.length >= CONFIG.maxDetails) return;
+
+
+
+            if (properties[field] === undefined ||
+
+                properties[field] === null ||
+
+                String(properties[field]).trim() === "") {
 
                 return;
-            }
-
-
-            var layers =
-                getSearchableLayers();
-
-
-            if (
-                layers.length !==
-                previousLayerCount
-            ) {
-
-                previousLayerCount =
-                    layers.length;
-
-                refreshLayerList();
 
             }
 
-        },
-        1000
-    );
 
 
-    /* ============================================================
-       INITIAL SETUP
-       ============================================================ */
+            if (output.some(function (item) {
 
-    setTimeout(
-        function () {
+                return item.key === field;
 
-            refreshLayerList();
-
-        },
-        500
-    );
+            })) return;
 
 
-    console.log(
-        "Stage 6 Search ready."
-    );
+
+            output.push({
+
+                key: field,
+
+                value: valueToString(properties[field])
+
+            });
+
+        });
+
+
+
+        if (output.length < CONFIG.maxDetails) {
+
+            Object.keys(properties).forEach(function (field) {
+
+                if (output.length >= CONFIG.maxDetails) return;
+
+                if (field === "geometry") return;
+
+
+
+                if (output.some(function (item) {
+
+                    return item.key === field;
+
+                })) return;
+
+
+
+                const value = valueToString(properties[field]).trim();
+
+
+
+                if (!value) return;
+
+
+
+                output.push({
+
+                    key: field,
+
+                    value: value
+
+                });
+
+            });
+
+        }
+
+
+
+        return output.slice(0, CONFIG.maxDetails);
+
+    }
+
+
+
+    function renderResults(features, layer) {
+
+        resultCount.textContent = String(features.length);
+
+        resultsBox.innerHTML = "";
+
+
+
+        if (!features.length) {
+
+            showEmpty(
+
+                "No matching parcels",
+
+                "Try a different value or change Exact match to Contains."
+
+            );
+
+            return;
+
+        }
+
+
+
+        features.forEach(function (feature, index) {
+
+            const card = document.createElement("button");
+
+            card.type = "button";
+
+            card.className = "s6-result-card";
+
+            card.setAttribute(
+
+                "aria-label",
+
+                "Zoom to " + getTitleForFeature(feature)
+
+            );
+
+
+
+            const title = getTitleForFeature(feature);
+
+            const owner = getOwnerForFeature(feature);
+
+            const details = getDetailFields(feature);
+
+
+
+            const detailHTML = details.map(function (item) {
+
+                return `
+
+                    <div class="s6-detail">
+
+                        <div class="s6-detail-label">${escapeHTML(item.key)}</div>
+
+                        <div class="s6-detail-value">${escapeHTML(item.value)}</div>
+
+                    </div>
+
+                `;
+
+            }).join("");
+
+
+
+            card.innerHTML = `
+
+                <div class="s6-result-title-row">
+
+                    <div class="s6-result-pin">${icon("pin", 16)}</div>
+
+                    <div class="s6-result-main">
+
+                        <div class="s6-result-title">
+
+                            ${escapeHTML(title)}
+
+                        </div>
+
+                        ${owner
+
+                            ? '<div class="s6-result-owner">' +
+
+                              escapeHTML(owner) + '</div>'
+
+                            : '<div class="s6-result-owner">Parcel record</div>'}
+
+                    </div>
+
+                    <span style="color:#8293a8">${icon("chevron", 17)}</span>
+
+                </div>
+
+                ${detailHTML
+
+                    ? '<div class="s6-result-details">' + detailHTML + '</div>'
+
+                    : ''}
+
+                <div class="s6-result-layer">
+
+                    ${escapeHTML(getLayerName(layer))} · Result ${index + 1}
+
+                </div>
+
+            `;
+
+
+
+            card.addEventListener("click", function () {
+
+                zoomToFeature(feature);
+
+                highlightOneFeature(feature);
+
+            });
+
+
+
+            resultsBox.appendChild(card);
+
+        });
+    }
+
+
+
+    // --------------------------------------------------------
+
+    // HIGHLIGHT OVERLAY
+
+    // Does not change styles on source features.
+
+    // --------------------------------------------------------
+
+
+
+    function createHighlightLayer() {
+
+        const currentMap = getMap();
+
+
+
+        if (!currentMap || !window.ol) return null;
+
+
+
+        const source = new ol.source.Vector();
+
+
+
+        const layer = new ol.layer.Vector({
+
+            source: source,
+
+            zIndex: 99999,
+
+            style: new ol.style.Style({
+
+                fill: new ol.style.Fill({
+
+                    color: "rgba(245, 158, 11, 0.24)"
+
+                }),
+
+                stroke: new ol.style.Stroke({
+
+                    color: CONFIG.highlightStroke,
+
+                    width: 3
+
+                }),
+
+                image: new ol.style.Circle({
+
+                    radius: 7,
+
+                    fill: new ol.style.Fill({
+
+                        color: CONFIG.highlightColor
+
+                    }),
+
+                    stroke: new ol.style.Stroke({
+
+                        color: "#ffffff",
+
+                        width: 2
+
+                    })
+
+                })
+
+            })
+
+        });
+
+
+
+        layer.set("title", CONFIG.highlightLayerName);
+
+        layer.set("name", CONFIG.highlightLayerName);
+
+        layer.set("dynamicSearchHighlight", true);
+
+        layer.set("stage6SearchHighlight", true);
+
+        layer.set("isSearchResultLayer", true);
+
+
+
+        currentMap.addLayer(layer);
+
+
+
+        return layer;
+
+    }
+
+
+
+    function getHighlightLayer() {
+
+        if (highlightLayer) return highlightLayer;
+
+
+
+        const currentMap = getMap();
+
+
+
+        if (!currentMap || !window.ol) return null;
+
+
+
+        highlightLayer = createHighlightLayer();
+
+
+
+        return highlightLayer;
+
+    }
+
+
+
+    function clearHighlights() {
+
+        if (highlightLayer) {
+
+            const source = highlightLayer.getSource();
+
+
+
+            if (source) source.clear();
+
+        }
+
+    }
+
+
+
+    function addFeatureHighlight(feature) {
+
+        const layer = getHighlightLayer();
+
+
+
+        if (!layer || !feature || !feature.getGeometry()) return;
+
+
+
+        const geometry = feature.getGeometry().clone();
+
+
+
+        const highlightFeature = new ol.Feature({
+
+            geometry: geometry
+
+        });
+
+
+
+        layer.getSource().addFeature(highlightFeature);
+
+    }
+
+
+
+    function drawHighlights(features) {
+
+        clearHighlights();
+
+
+
+        features.forEach(function (feature) {
+
+            addFeatureHighlight(feature);
+
+        });
+
+    }
+
+
+
+    function highlightOneFeature(feature) {
+
+        clearHighlights();
+
+        addFeatureHighlight(feature);
+
+    }
+
+
+
+    // --------------------------------------------------------
+
+    // ZOOM
+
+    // --------------------------------------------------------
+
+
+
+    function zoomToFeature(feature) {
+
+        const currentMap = getMap();
+
+
+
+        if (!currentMap || !feature || !feature.getGeometry()) {
+
+            setStatus("Could not zoom to this feature.", "warning");
+
+            return;
+
+        }
+
+
+
+        const geometry = feature.getGeometry();
+
+        const extent = geometry.getExtent();
+
+
+
+        if (!extent || !extent.every(Number.isFinite)) {
+
+            setStatus("This feature has no valid geometry.", "warning");
+
+            return;
+
+        }
+
+
+
+        const view = currentMap.getView();
+
+        const size = currentMap.getSize();
+
+
+
+        const geometryType = geometry.getType();
+
+
+
+        if (geometryType === "Point" || geometryType === "MultiPoint") {
+
+            view.animate({
+
+                center: geometry.getClosestPoint(view.getCenter() || extent.slice(0, 2)),
+
+                zoom: Math.max(view.getZoom() || 0, 19),
+
+                duration: 350
+
+            });
+
+        } else {
+
+            view.fit(extent, {
+
+                size: size,
+
+                padding: [65, 55, 65, 55],
+
+                maxZoom: 21,
+
+                duration: 350
+
+            });
+
+        }
+
+    }
+
+
+
+    function zoomToAll() {
+
+        const currentMap = getMap();
+
+
+
+        if (!currentMap) return;
+
+
+
+        const layer = getHighlightLayer();
+
+        const source = layer && layer.getSource();
+
+
+
+        if (!source || source.getFeatures().length === 0) {
+
+            setStatus("There are no highlighted results to zoom to.", "warning");
+
+            return;
+
+        }
+
+
+
+        const extent = source.getExtent();
+
+
+
+        if (!extent || !extent.every(Number.isFinite)) {
+
+            setStatus("The result extent is invalid.", "warning");
+
+            return;
+
+        }
+
+
+
+        currentMap.getView().fit(extent, {
+
+            size: currentMap.getSize(),
+
+            padding: [70, 60, 70, 60],
+
+            maxZoom: 20,
+
+            duration: 400
+
+        });
+
+    }
+
+
+
+    // --------------------------------------------------------
+
+    // CLEAR / RESET
+
+    // --------------------------------------------------------
+
+
+
+    function clearResults() {
+
+        currentResults = [];
+
+        clearHighlights();
+
+
+
+        resultCount.textContent = "0";
+
+
+
+        showEmpty(
+
+            "Ready to search",
+
+            "Enter a parcel number, survey number, owner name, or another attribute."
+
+        );
+
+
+
+        setStatus("Results and highlights cleared.", "");
+
+    }
+
+
+
+    function clearSearchInputs() {
+
+        Array.from(conditionList.children).forEach(function (row) {
+
+            const input = row.querySelector(".s6-value-input");
+
+
+
+            if (input) input.value = "";
+
+
+
+            hideSuggestions(row);
+
+        });
+
+
+
+        clearResults();
+
+    }
+
+
+
+    // --------------------------------------------------------
+
+    // EVENT DELEGATION
+
+    // --------------------------------------------------------
+
+
+
+    searchButton.addEventListener("click", function () {
+
+        const opening = !panel.classList.contains("s6-open");
+
+
+
+        panel.classList.toggle("s6-open", opening);
+
+        searchButton.setAttribute("aria-expanded", String(opening));
+
+
+
+        if (opening) {
+
+            refreshLayers();
+
+
+
+            const firstInput = panel.querySelector(".s6-value-input");
+
+
+
+            if (firstInput) {
+
+                firstInput.focus({ preventScroll: true });
+
+            }
+
+        }
+
+    });
+
+
+
+    layerSelect.addEventListener("change", function () {
+
+        updateAllConditionFields();
+
+        clearResults();
+
+        setStatus("Layer changed. Enter your search values.", "");
+
+    });
+
+
+
+    panel.addEventListener("click", function (event) {
+
+        const button = event.target.closest("button[data-action]");
+
+
+
+        if (!button) return;
+
+
+
+        const action = button.dataset.action;
+
+
+
+        if (action === "close") {
+
+            panel.classList.remove("s6-open");
+
+            searchButton.setAttribute("aria-expanded", "false");
+
+        }
+
+
+
+        if (action === "refresh") {
+
+            refreshLayers();
+
+        }
+
+
+
+        if (action === "add-condition") {
+
+            addCondition();
+
+        }
+
+
+
+        if (action === "remove-condition") {
+
+            const row = button.closest(".s6-condition");
+
+
+
+            if (row) {
+
+                row.remove();
+
+                renumberConditions();
+
+                clearResults();
+
+            }
+
+
+
+            if (!conditionList.children.length) {
+
+                addCondition();
+
+            }
+
+        }
+
+
+
+        if (action === "search") {
+
+            runSearch();
+
+        }
+
+
+
+        if (action === "clear") {
+
+            clearSearchInputs();
+
+        }
+
+
+
+        if (action === "clear-highlight") {
+
+            clearHighlights();
+
+            setStatus("Map highlights cleared.", "");
+
+        }
+
+
+
+        if (action === "zoom-all") {
+
+            zoomToAll();
+
+        }
+
+    });
+
+
+
+    document.addEventListener("keydown", function (event) {
+
+        if (event.key === "Escape" &&
+
+            panel.classList.contains("s6-open")) {
+
+            panel.classList.remove("s6-open");
+
+            searchButton.setAttribute("aria-expanded", "false");
+
+        }
+
+    });
+
+
+
+    // --------------------------------------------------------
+
+    // MAP-CLICK COMPATIBILITY
+
+    // Clicking the map does not disable or intercept the tool.
+
+    // --------------------------------------------------------
+
+
+
+    function bindMap() {
+
+        const currentMap = getMap();
+
+
+
+        if (!currentMap) return false;
+
+
+
+        if (!highlightLayer) {
+
+            highlightLayer = createHighlightLayer();
+
+        }
+
+
+
+        return true;
+
+    }
+
+
+
+    // --------------------------------------------------------
+
+    // PUBLIC REFRESH FUNCTION
+
+    // --------------------------------------------------------
+
+
+
+    window.refreshStage6Search = function () {
+
+        refreshLayers();
+
+        bindMap();
+
+    };
+
+
+
+    // --------------------------------------------------------
+
+    // INITIALIZE
+
+    // --------------------------------------------------------
+
+
+
+    function initialize() {
+
+        refreshLayers();
+
+        bindMap();
+
+
+
+        if (!getMap()) {
+
+            setStatus(
+
+                "Waiting for the OpenLayers map. Use Refresh after the map loads.",
+
+                "warning"
+
+            );
+
+        }
+
+    }
+
+
+
+    if (document.readyState === "loading") {
+
+        document.addEventListener("DOMContentLoaded", initialize, {
+
+            once: true
+
+        });
+
+    } else {
+
+        initialize();
+
+    }
+
+
 
 })();
