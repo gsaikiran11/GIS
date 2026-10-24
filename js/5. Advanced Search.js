@@ -2307,8 +2307,8 @@ function installStyles() {
 
     // Force this tool above ordinary map controls and custom survey panels.
     // Inline !important protects it from later stylesheet rules.
-    searchButton.style.setProperty("z-index", "2147483646", "important");
-    panel.style.setProperty("z-index", "2147483647", "important");
+    searchButton.style.setProperty("z-index", "21474", "important");
+    panel.style.setProperty("z-index", "21474", "important");
     searchButton.style.setProperty("position", "fixed", "important");
     panel.style.setProperty("position", "fixed", "important");
 
