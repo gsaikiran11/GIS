@@ -509,7 +509,7 @@ function installStyles() {
 
             left: 12px;
 
-            z-index: 2147483646 !important;
+            z-index: 21474 !important;
 
             display: flex;
 
@@ -575,7 +575,7 @@ function installStyles() {
 
             left: 12px;
 
-            z-index: 2147483647 !important;
+            z-index: 21474 !important;
 
             display: none;
 
