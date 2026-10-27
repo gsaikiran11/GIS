@@ -1,97 +1,621 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GeoStudio Pro | Advanced Web GIS & Spatial Analytics</title>
 
-    <meta charset="UTF-8">
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
 
-    <meta name="viewport"
-          content="width=device-width, initial-scale=1.0">
+  <!-- Leaflet CSS & JS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
-    <title>Web Map Survey</title>
+  <!-- Leaflet-Geoman (Advanced Vector Digitizing & Editing) -->
+  <link rel="stylesheet" href="https://unpkg.com/@geoman-io/leaflet-geoman-free@2.14.2/dist/leaflet-geoman.css" />
+  <script src="https://unpkg.com/@geoman-io/leaflet-geoman-free@2.14.2/dist/leaflet-geoman.min.js"></script>
 
-    <!-- OpenLayers CSS -->
-    <link rel="stylesheet"
-          href="https://cdn.jsdelivr.net/npm/ol@10.6.1/ol.css">
+  <!-- Turf.js (Spatial Analysis Engine) -->
+  <script src="https://unpkg.com/@turf/turf@6.5.0/turf.min.js"></script>
 
-    <!-- Our CSS -->
-    <link rel="stylesheet"
-          href="css/style.css">
+  <!-- PapaParse (CSV Parsing Engine) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 
-    <link rel="manifest" href="/GIS/manifest.json">
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
 
-<meta name="theme-color" content="#1f6feb">
+  <style>
+    /* Custom Scrollbars */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #18181b; }
+    ::-webkit-scrollbar-thumb { background: #3f3f46; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #52525b; }
 
-<meta name="mobile-web-app-capable" content="yes">
-
-<link rel="apple-touch-icon" href="/GIS/icons/image_192x192.png">
-
+    /* Custom Geoman Overrides to match Dark UI */
+    .leaflet-pm-toolbar .leaflet-buttons-control-button {
+      background-color: #27272a !important;
+      color: #fafafa !important;
+      border-color: #3f3f46 !important;
+    }
+    .leaflet-pm-toolbar .leaflet-buttons-control-button:hover {
+      background-color: #3f3f46 !important;
+    }
+  </style>
 </head>
+<body class="h-screen w-screen overflow-hidden flex flex-col bg-zinc-950 text-zinc-100 font-sans antialiased">
 
-<body>
+  <!-- Top App Navigation Bar -->
+  <header class="h-14 border-b border-zinc-800 bg-zinc-900/90 backdrop-blur px-4 flex items-center justify-between z-20">
+    <div class="flex items-center space-x-3">
+      <div class="h-8 w-8 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold">
+        <i data-lucide="globe-2" class="w-5 h-5"></i>
+      </div>
+      <div>
+        <h1 class="font-semibold text-sm leading-tight text-white flex items-center gap-2">
+          GeoStudio Pro
+          <span class="text-[10px] font-medium bg-emerald-500/10 text-emerald-400 px-1.5 py-0.5 rounded border border-emerald-500/20">v2.4 Enterprise</span>
+        </h1>
+        <p class="text-[11px] text-zinc-400 leading-tight">Advanced Geospatial Analysis & Digitizing Platform</p>
+      </div>
+    </div>
 
-    <!-- MAP -->
-    <div id="map"></div>
+    <!-- Quick Action Toolbars -->
+    <div class="flex items-center space-x-2">
+      <label class="cursor-pointer flex items-center space-x-1.5 text-xs bg-zinc-800 hover:bg-zinc-700 text-zinc-200 px-3 py-1.5 rounded-md border border-zinc-700 transition">
+        <i data-lucide="upload" class="w-3.5 h-3.5"></i>
+        <span>Import Data</span>
+        <input type="file" id="fileInput" accept=".geojson,.json,.csv" class="hidden" />
+      </label>
 
+      <button id="exportGeoJsonBtn" class="flex items-center space-x-1.5 text-xs bg-zinc-800 hover:bg-zinc-700 text-zinc-200 px-3 py-1.5 rounded-md border border-zinc-700 transition">
+        <i data-lucide="download" class="w-3.5 h-3.5"></i>
+        <span>Export GeoJSON</span>
+      </button>
 
-    <!-- OpenLayers JavaScript -->
-    <script src="https://cdn.jsdelivr.net/npm/ol@10.6.1/dist/ol.js"></script>
+      <button id="toggleTableBtn" class="flex items-center space-x-1.5 text-xs bg-emerald-600 hover:bg-emerald-500 text-white font-medium px-3 py-1.5 rounded-md shadow-sm transition">
+        <i data-lucide="table-2" class="w-3.5 h-3.5"></i>
+        <span>Attribute Table (<span id="featureCount">0</span>)</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Viewport Area -->
+  <div class="relative flex-1 flex overflow-hidden">
     
+    <!-- Left Floating Control Panel -->
+    <aside class="w-80 border-r border-zinc-800 bg-zinc-900/95 flex flex-col z-10 shadow-2xl backdrop-blur">
+      <!-- Tabs -->
+      <div class="flex border-b border-zinc-800 text-xs font-medium text-zinc-400">
+        <button id="tabLayersBtn" class="flex-1 py-2.5 px-3 border-b-2 border-emerald-500 text-emerald-400 flex items-center justify-center gap-1.5">
+          <i data-lucide="layers" class="w-3.5 h-3.5"></i> Layers
+        </button>
+        <button id="tabAnalyticsBtn" class="flex-1 py-2.5 px-3 border-b-2 border-transparent hover:text-zinc-200 flex items-center justify-center gap-1.5">
+          <i data-lucide="cpu" class="w-3.5 h-3.5"></i> Spatial Tools
+        </button>
+      </div>
 
-    <!-- Our JavaScript -->
-    <script src="https://unpkg.com/shpjs@latest/dist/shp.js"></script>
+      <!-- Tab Content Area -->
+      <div class="flex-1 overflow-y-auto p-4 space-y-5 text-xs">
+        
+        <!-- LAYERS TAB CONTENT -->
+        <div id="tabLayersContent" class="space-y-5">
+          <!-- Basemap Selector -->
+          <div>
+            <label class="text-[11px] font-semibold uppercase tracking-wider text-zinc-400 mb-2 block">Base Cartography</label>
+            <div class="grid grid-cols-2 gap-2">
+              <button onclick="setBasemap('dark')" class="basemap-card p-2 rounded border border-emerald-500/40 bg-zinc-800 text-left hover:border-emerald-500 transition">
+                <span class="block font-medium text-zinc-200">Carto Dark</span>
+                <span class="text-[10px] text-zinc-400">Low-contrast night</span>
+              </button>
+              <button onclick="setBasemap('satellite')" class="basemap-card p-2 rounded border border-zinc-700 bg-zinc-800 text-left hover:border-emerald-500 transition">
+                <span class="block font-medium text-zinc-200">Esri Satellite</span>
+                <span class="text-[10px] text-zinc-400">High-res aerial</span>
+              </button>
+              <button onclick="setBasemap('osm')" class="basemap-card p-2 rounded border border-zinc-700 bg-zinc-800 text-left hover:border-emerald-500 transition">
+                <span class="block font-medium text-zinc-200">OpenStreetMap</span>
+                <span class="text-[10px] text-zinc-400">Standard street</span>
+              </button>
+              <button onclick="setBasemap('light')" class="basemap-card p-2 rounded border border-zinc-700 bg-zinc-800 text-left hover:border-emerald-500 transition">
+                <span class="block font-medium text-zinc-200">Positron Light</span>
+                <span class="text-[10px] text-zinc-400">Minimal monochrome</span>
+              </button>
+            </div>
+          </div>
 
-    <script src="js/0. app.js"></script>
-    <script src="js/1. Measure Tool.js"></script>
-    <script src="js/2. Geolocate.js"></script>
-    <script src="js/3. Layer Styling.js"></script>
-    <script src="js/4. Add Map Services.js"></script>
-    <script src="js/5. Advanced Search.js"></script>
-    <script src="js/6. Multi-Polygon Sub Division Tool.js"></script>
-    <script src="js/7. Export.js"></script>
-    <script src="js/8. Co-ordinates.js"></script>
-    <script src="js/9. GIS Import tool.js"></script>
-    <script src="js/10. North.js"></script>
-    <script src="js/11. Popup.js"></script>
-    <script src="js/12. Parcel report tool.js"></script>
-    <script src="js/13. bhunaksha-Adangal.js"></script>
+          <!-- Active Feature Layer Manager -->
+          <div>
+            <div class="flex items-center justify-between mb-2">
+              <label class="text-[11px] font-semibold uppercase tracking-wider text-zinc-400">Active Digitized Layer</label>
+              <button onclick="clearAllLayers()" class="text-[10px] text-rose-400 hover:underline">Clear All</button>
+            </div>
+            <div class="bg-zinc-800/60 p-3 rounded-lg border border-zinc-700/60 space-y-3">
+              <div class="flex items-center justify-between">
+                <span class="font-medium text-zinc-200">Drawn Vector Geometries</span>
+                <span class="text-[11px] bg-zinc-700 px-2 py-0.5 rounded text-zinc-300" id="geomSummary">0 Geometries</span>
+              </div>
+              <div>
+                <div class="flex justify-between text-[11px] text-zinc-400 mb-1">
+                  <span>Layer Opacity</span>
+                  <span id="opacityLabel">80%</span>
+                </div>
+                <input id="layerOpacity" type="range" min="10" max="100" value="80" class="w-full accent-emerald-500 h-1 bg-zinc-700 rounded-lg cursor-pointer">
+              </div>
+            </div>
+          </div>
+        </div>
 
+        <!-- SPATIAL TOOLS TAB CONTENT (Hidden by default) -->
+        <div id="tabAnalyticsContent" class="hidden space-y-5">
+          <!-- Buffer Generator -->
+          <div class="bg-zinc-800/40 p-3 rounded-lg border border-zinc-700/50 space-y-3">
+            <h4 class="font-semibold text-zinc-200 flex items-center gap-1.5">
+              <i data-lucide="circle-dot" class="w-4 h-4 text-emerald-400"></i> Buffer Zone Generator
+            </h4>
+            <p class="text-[11px] text-zinc-400 leading-normal">Generates dynamic buffer boundaries around all selected or drawn features.</p>
+            <div class="flex items-center gap-2">
+              <input type="number" id="bufferDistance" value="500" class="w-full bg-zinc-900 border border-zinc-700 rounded px-2.5 py-1 text-zinc-200 text-xs focus:ring-1 focus:ring-emerald-500 outline-none" />
+              <select id="bufferUnits" class="bg-zinc-900 border border-zinc-700 rounded px-2 py-1 text-zinc-200 text-xs">
+                <option value="meters">Meters</option>
+                <option value="kilometers">Kilometers</option>
+                <option value="miles">Miles</option>
+              </select>
+            </div>
+            <button onclick="runBufferTool()" class="w-full py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded text-xs font-medium transition">
+              Run Buffer Calculation
+            </button>
+          </div>
 
-    <script src="js/100. Parcel Subdivision.js"></script>
-    
-    
-    <script src="js/DRAGGABLE CONTROL POSITION MANAGER.js"></script>
+          <!-- Geometric Centroids -->
+          <div class="bg-zinc-800/40 p-3 rounded-lg border border-zinc-700/50 space-y-2">
+            <h4 class="font-semibold text-zinc-200 flex items-center gap-1.5">
+              <i data-lucide="crosshair" class="w-4 h-4 text-indigo-400"></i> Center of Mass (Centroid)
+            </h4>
+            <p class="text-[11px] text-zinc-400">Calculates geometric center markers for all polygons on canvas.</p>
+            <button onclick="runCentroidTool()" class="w-full py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded text-xs font-medium transition">
+              Compute Centroids
+            </button>
+          </div>
 
+          <!-- Convex Hull Boundary -->
+          <div class="bg-zinc-800/40 p-3 rounded-lg border border-zinc-700/50 space-y-2">
+            <h4 class="font-semibold text-zinc-200 flex items-center gap-1.5">
+              <i data-lucide="shield" class="w-4 h-4 text-amber-400"></i> Convex Hull Boundary
+            </h4>
+            <p class="text-[11px] text-zinc-400">Computes the minimum bounding envelope enclosing all points and vertices.</p>
+            <button onclick="runConvexHullTool()" class="w-full py-1.5 bg-amber-600 hover:bg-amber-500 text-white rounded text-xs font-medium transition">
+              Compute Convex Hull
+            </button>
+          </div>
+        </div>
 
+      </div>
+    </aside>
 
-</body>
+    <!-- Map Canvas Container -->
+    <main id="map" class="flex-1 h-full w-full z-0"></main>
 
+    <!-- Bottom Dockable Attribute Table (QGIS Style) -->
+    <div id="attributeTableDrawer" class="absolute bottom-6 left-84 right-4 bg-zinc-900/95 border border-zinc-800 rounded-xl shadow-2xl z-20 hidden flex-col max-h-72 backdrop-blur transition-all">
+      <div class="flex items-center justify-between px-4 py-2.5 border-b border-zinc-800 bg-zinc-800/50">
+        <div class="flex items-center gap-2">
+          <i data-lucide="table" class="w-4 h-4 text-emerald-400"></i>
+          <span class="text-xs font-semibold uppercase tracking-wider text-zinc-200">Feature Attribute Table</span>
+        </div>
+        <button onclick="toggleAttributeTable()" class="text-zinc-400 hover:text-white">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+      <div class="overflow-auto flex-1 p-2">
+        <table class="w-full text-left text-xs text-zinc-300">
+          <thead class="text-[11px] uppercase bg-zinc-800 text-zinc-400 border-b border-zinc-700 sticky top-0">
+            <tr>
+              <th class="p-2">FID</th>
+              <th class="p-2">Geometry Type</th>
+              <th class="p-2">Feature Name</th>
+              <th class="p-2">Category</th>
+              <th class="p-2">Calculated Metric</th>
+              <th class="p-2 text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="attributeTableBody" class="divide-y divide-zinc-800">
+            <!-- Dynamically populated rows -->
+          </tbody>
+        </table>
+      </div>
+    </div>
 
+  </div>
 
-<script>
-if ("serviceWorker" in navigator) {
-    window.addEventListener("load", () => {
-        navigator.serviceWorker.register("/GIS/sw.js", {
-            scope: "/GIS/"
-        }).then((registration) => {
+  <!-- Bottom Telemetry Status Bar -->
+  <footer class="h-7 border-t border-zinc-800 bg-zinc-950 px-4 flex items-center justify-between text-[11px] text-zinc-400 font-mono z-10">
+    <div class="flex items-center space-x-4">
+      <span class="flex items-center gap-1">
+        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+        <span>CRS: EPSG:4326 (WGS84)</span>
+      </span>
+      <span>•</span>
+      <span id="mouseCoords">Lat: 0.000000 | Lng: 0.000000</span>
+    </div>
+    <div class="flex items-center space-x-3">
+      <span id="zoomLevel">Zoom: 4</span>
+      <span>•</span>
+      <span>Turf.js Accelerated</span>
+    </div>
+  </footer>
 
-            console.log(
-                "[GIS PWA] Service Worker registered:",
-                registration.scope
-            );
+  <!-- Application Logic -->
+  <script>
+    // Initialize Icons
+    lucide.createIcons();
 
-        }).catch((error) => {
-
-            console.error(
-                "[GIS PWA] Service Worker registration failed:",
-                error
-            );
-
-        });
+    // 1. Map Initialization
+    const map = L.map('map', {
+      center: [20.5937, 78.9629], // Centered over India / Asia by default
+      zoom: 5,
+      zoomControl: false
     });
-}
-</script>
 
+    // Reposition zoom controls to top-right
+    L.control.zoom({ position: 'topright' }).addTo(map);
 
-    
+    // 2. Basemap Tile Configurations
+    const basemaps = {
+      dark: L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+        attribution: '&copy; OpenStreetMap &copy; CARTO',
+        maxZoom: 19
+      }),
+      satellite: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+        attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community',
+        maxZoom: 19
+      }),
+      osm: L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap contributors',
+        maxZoom: 19
+      }),
+      light: L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+        attribution: '&copy; OpenStreetMap &copy; CARTO',
+        maxZoom: 19
+      })
+    };
+
+    let currentBasemap = basemaps.dark;
+    currentBasemap.addTo(map);
+
+    function setBasemap(type) {
+      map.removeLayer(currentBasemap);
+      currentBasemap = basemaps[type];
+      currentBasemap.addTo(map);
+    }
+
+    // 3. Feature Layer Storage & Geoman Toolbar Setup
+    const drawnItems = new L.FeatureGroup().addTo(map);
+
+    map.pm.addControls({
+      position: 'topleft',
+      drawCircle: true,
+      drawMarker: true,
+      drawPolygon: true,
+      drawPolyline: true,
+      drawRectangle: true,
+      drawCircleMarker: false,
+      drawText: false,
+      cutPolygon: true,
+      editMode: true,
+      dragMode: true,
+      removalMode: true
+    });
+
+    // 4. Feature Tracking & Attribute Table Binding
+    let featuresStore = [];
+
+    function updateMetrics(layer) {
+      const geojson = layer.toGeoJSON();
+      const geomType = geojson.geometry.type;
+
+      if (!layer.featureProperties) {
+        layer.featureProperties = {
+          fid: 'feat_' + Math.random().toString(36).substr(2, 6),
+          name: `Feature #${featuresStore.length + 1}`,
+          category: geomType,
+          metric: 'N/A'
+        };
+      }
+
+      // Calculate Turf spatial properties
+      if (geomType === 'Polygon' || geomType === 'MultiPolygon') {
+        const areaSqM = turf.area(geojson);
+        layer.featureProperties.metric = areaSqM > 1e6 
+          ? `${(areaSqM / 1e6).toFixed(2)} km²` 
+          : `${areaSqM.toFixed(1)} m²`;
+      } else if (geomType === 'LineString' || geomType === 'MultiLineString') {
+        const lengthKm = turf.length(geojson, { units: 'kilometers' });
+        layer.featureProperties.metric = `${lengthKm.toFixed(2)} km`;
+      } else if (geomType === 'Point') {
+        const coords = geojson.geometry.coordinates;
+        layer.featureProperties.metric = `${coords[1].toFixed(4)}, ${coords[0].toFixed(4)}`;
+      }
+
+      // Bind tooltip
+      layer.bindTooltip(`<b>${layer.featureProperties.name}</b><br>${layer.featureProperties.metric}`, {
+        sticky: true
+      });
+    }
+
+    function syncStore() {
+      featuresStore = [];
+      drawnItems.eachLayer((layer) => {
+        updateMetrics(layer);
+        featuresStore.push(layer);
+      });
+
+      document.getElementById('featureCount').innerText = featuresStore.length;
+      document.getElementById('geomSummary').innerText = `${featuresStore.length} Geometries`;
+      renderAttributeTable();
+    }
+
+    map.on('pm:create', (e) => {
+      drawnItems.addLayer(e.layer);
+      syncStore();
+
+      e.layer.on('pm:edit', () => syncStore());
+    });
+
+    map.on('pm:remove', () => syncStore());
+
+    // 5. Attribute Table Rendering & Inline Editing
+    function renderAttributeTable() {
+      const tbody = document.getElementById('attributeTableBody');
+      tbody.innerHTML = '';
+
+      if (featuresStore.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-zinc-500">No vector geometries created. Draw shapes on the map to inspect properties.</td></tr>`;
+        return;
+      }
+
+      featuresStore.forEach((layer) => {
+        const props = layer.featureProperties;
+        const geojson = layer.toGeoJSON();
+        const tr = document.createElement('tr');
+        tr.className = "hover:bg-zinc-800/80 transition cursor-pointer";
+        tr.innerHTML = `
+          <td class="p-2 font-mono text-zinc-400">${props.fid}</td>
+          <td class="p-2"><span class="px-1.5 py-0.5 rounded text-[10px] bg-zinc-800 text-zinc-300 border border-zinc-700">${geojson.geometry.type}</span></td>
+          <td class="p-2"><input class="bg-transparent border-b border-transparent hover:border-zinc-500 focus:border-emerald-500 outline-none text-zinc-200" value="${props.name}" onchange="updateName('${props.fid}', this.value)" /></td>
+          <td class="p-2"><input class="bg-transparent border-b border-transparent hover:border-zinc-500 focus:border-emerald-500 outline-none text-zinc-200" value="${props.category}" onchange="updateCategory('${props.fid}', this.value)" /></td>
+          <td class="p-2 font-mono text-emerald-400">${props.metric}</td>
+          <td class="p-2 text-right">
+            <button onclick="zoomToFeature('${props.fid}')" class="px-2 py-0.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 rounded text-[11px] mr-1">Zoom</button>
+            <button onclick="deleteFeature('${props.fid}')" class="px-2 py-0.5 bg-rose-950/60 hover:bg-rose-900 text-rose-300 rounded text-[11px]">Delete</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    window.updateName = (fid, value) => {
+      const target = featuresStore.find(l => l.featureProperties.fid === fid);
+      if (target) {
+        target.featureProperties.name = value;
+        updateMetrics(target);
+      }
+    };
+
+    window.updateCategory = (fid, value) => {
+      const target = featuresStore.find(l => l.featureProperties.fid === fid);
+      if (target) target.featureProperties.category = value;
+    };
+
+    window.zoomToFeature = (fid) => {
+      const target = featuresStore.find(l => l.featureProperties.fid === fid);
+      if (target) {
+        if (target.getBounds) {
+          map.fitBounds(target.getBounds(), { padding: [50, 50] });
+        } else if (target.getLatLng) {
+          map.setView(target.getLatLng(), 14);
+        }
+      }
+    };
+
+    window.deleteFeature = (fid) => {
+      const target = featuresStore.find(l => l.featureProperties.fid === fid);
+      if (target) {
+        drawnItems.removeLayer(target);
+        syncStore();
+      }
+    };
+
+    function toggleAttributeTable() {
+      const drawer = document.getElementById('attributeTableDrawer');
+      drawer.classList.toggle('hidden');
+      drawer.classList.toggle('flex');
+    }
+    document.getElementById('toggleTableBtn').addEventListener('click', toggleAttributeTable);
+
+    // 6. Spatial Analytics (Turf.js Tools)
+    window.runBufferTool = () => {
+      if (drawnItems.getLayers().length === 0) {
+        alert("Please draw or import geometries first.");
+        return;
+      }
+      const dist = parseFloat(document.getElementById('bufferDistance').value);
+      const units = document.getElementById('bufferUnits').value;
+
+      drawnItems.eachLayer((layer) => {
+        try {
+          const gj = layer.toGeoJSON();
+          const buffered = turf.buffer(gj, dist, { units: units });
+          const buffLayer = L.geoJSON(buffered, {
+            style: { color: '#10b981', weight: 2, fillOpacity: 0.2, dashArray: '4,4' }
+          });
+          buffLayer.eachLayer(l => drawnItems.addLayer(l));
+        } catch (err) {
+          console.error("Buffer error:", err);
+        }
+      });
+      syncStore();
+    };
+
+    window.runCentroidTool = () => {
+      let count = 0;
+      drawnItems.eachLayer((layer) => {
+        const gj = layer.toGeoJSON();
+        if (gj.geometry.type.includes('Polygon')) {
+          const centroidPt = turf.centroid(gj);
+          const [lng, lat] = centroidPt.geometry.coordinates;
+          const marker = L.circleMarker([lat, lng], {
+            radius: 6,
+            fillColor: '#818cf8',
+            color: '#ffffff',
+            weight: 2,
+            fillOpacity: 0.9
+          });
+          drawnItems.addLayer(marker);
+          count++;
+        }
+      });
+      if (count > 0) syncStore();
+      else alert("No polygons found to compute centroids.");
+    };
+
+    window.runConvexHullTool = () => {
+      const fc = drawnItems.toGeoJSON();
+      if (!fc.features.length) {
+        alert("Add features before computing convex hull.");
+        return;
+      }
+      const hull = turf.convex(fc);
+      if (hull) {
+        const hullLayer = L.geoJSON(hull, {
+          style: { color: '#f59e0b', weight: 2.5, fillOpacity: 0.25 }
+        });
+        hullLayer.eachLayer(l => drawnItems.addLayer(l));
+        syncStore();
+      } else {
+        alert("Convex hull requires at least 3 non-collinear vertices.");
+      }
+    };
+
+    window.clearAllLayers = () => {
+      if (confirm("Are you sure you want to remove all features?")) {
+        drawnItems.clearLayers();
+        syncStore();
+      }
+    };
+
+    // 7. Layer Opacity Slider Control
+    document.getElementById('layerOpacity').addEventListener('input', (e) => {
+      const val = e.target.value / 100;
+      document.getElementById('opacityLabel').innerText = `${e.target.value}%`;
+      drawnItems.eachLayer((l) => {
+        if (l.setStyle) l.setStyle({ fillOpacity: val * 0.4, opacity: val });
+        if (l.setOpacity) l.setOpacity(val);
+      });
+    });
+
+    // 8. Data Import Engine (GeoJSON & CSV with lat/lon)
+    document.getElementById('fileInput').addEventListener('change', function(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      const ext = file.name.split('.').pop().toLowerCase();
+
+      reader.onload = function(evt) {
+        const content = evt.target.result;
+        if (ext === 'geojson' || ext === 'json') {
+          try {
+            const data = JSON.parse(content);
+            const layer = L.geoJSON(data, {
+              onEachFeature: (feature, l) => drawnItems.addLayer(l)
+            });
+            map.fitBounds(layer.getBounds());
+            syncStore();
+          } catch(err) {
+            alert("Invalid GeoJSON syntax: " + err.message);
+          }
+        } else if (ext === 'csv') {
+          Papa.parse(content, {
+            header: true,
+            dynamicTyping: true,
+            complete: function(results) {
+              let pts = [];
+              results.data.forEach(row => {
+                const lat = row.latitude || row.lat || row.Lat || row.LAT;
+                const lng = row.longitude || row.lng || row.lon || row.Lng;
+                if (lat != null && lng != null) {
+                  const m = L.circleMarker([lat, lng], { radius: 5, color: '#38bdf8' });
+                  m.featureProperties = {
+                    fid: 'csv_' + Math.random().toString(36).substr(2, 5),
+                    name: row.name || row.title || 'CSV Point',
+                    category: 'CSV Import',
+                    metric: `${lat.toFixed(3)}, ${lng.toFixed(3)}`
+                  };
+                  drawnItems.addLayer(m);
+                  pts.push([lat, lng]);
+                }
+              });
+              if (pts.length > 0) {
+                map.fitBounds(L.latLngBounds(pts));
+                syncStore();
+              } else {
+                alert("No recognized lat/lng columns found in CSV.");
+              }
+            }
+          });
+        }
+      };
+      reader.readAsText(file);
+      e.target.value = '';
+    });
+
+    // 9. Data Export Engine (Standard GeoJSON FeatureCollection)
+    document.getElementById('exportGeoJsonBtn').addEventListener('click', () => {
+      const fc = {
+        type: "FeatureCollection",
+        features: featuresStore.map(l => {
+          const gj = l.toGeoJSON();
+          gj.properties = { ...l.featureProperties };
+          return gj;
+        })
+      };
+      const blob = new Blob([JSON.stringify(fc, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `GeoStudio_Export_${Date.now()}.geojson`;
+      a.click();
+      URL.revokeObjectURL(url);
+    });
+
+    // 10. Real-time Telemetry (Coordinates & Zoom)
+    map.on('mousemove', (e) => {
+      document.getElementById('mouseCoords').innerText = 
+        `Lat: ${e.latlng.lat.toFixed(6)} | Lng: ${e.latlng.lng.toFixed(6)}`;
+    });
+    map.on('zoomend', () => {
+      document.getElementById('zoomLevel').innerText = `Zoom: ${map.getZoom()}`;
+    });
+
+    // Tab Switcher Logic
+    const tabLayersBtn = document.getElementById('tabLayersBtn');
+    const tabAnalyticsBtn = document.getElementById('tabAnalyticsBtn');
+    const tabLayersContent = document.getElementById('tabLayersContent');
+    const tabAnalyticsContent = document.getElementById('tabAnalyticsContent');
+
+    tabLayersBtn.addEventListener('click', () => {
+      tabLayersBtn.className = "flex-1 py-2.5 px-3 border-b-2 border-emerald-500 text-emerald-400 flex items-center justify-center gap-1.5";
+      tabAnalyticsBtn.className = "flex-1 py-2.5 px-3 border-b-2 border-transparent hover:text-zinc-200 flex items-center justify-center gap-1.5";
+      tabLayersContent.classList.remove('hidden');
+      tabAnalyticsContent.classList.add('hidden');
+    });
+
+    tabAnalyticsBtn.addEventListener('click', () => {
+      tabAnalyticsBtn.className = "flex-1 py-2.5 px-3 border-b-2 border-emerald-500 text-emerald-400 flex items-center justify-center gap-1.5";
+      tabLayersBtn.className = "flex-1 py-2.5 px-3 border-b-2 border-transparent hover:text-zinc-200 flex items-center justify-center gap-1.5";
+      tabAnalyticsContent.classList.remove('hidden');
+      tabLayersContent.classList.add('hidden');
+    });
+  </script>
+</body>
 </html>
