@@ -235,6 +235,14 @@ body.drag-edit-mode #' + CONFIG.buttonId + ':hover,\
     border-radius: var(--ui-radius, 10px);\
 }\
 \
+#' + CONFIG.panelId + ' .s17-map-selection {\
+    display: none;\
+}\
+\
+#' + CONFIG.panelId + '.stage17-selected-mode .s17-map-selection {\
+    display: block;\
+}\
+\
 @keyframes stage17-fade {\
     from { opacity: 0; transform: translateY(6px); }\
     to   { opacity: 1; transform: translateY(0); }\
@@ -254,9 +262,6 @@ body.drag-edit-mode #' + CONFIG.buttonId + ':hover,\
     color: #fff;\
     flex-shrink: 0;\
     border-radius: var(--ui-radius, 10px) var(--ui-radius, 10px) 0 0;\
-    cursor: move;\
-    user-select: none;\
-    -webkit-user-select: none;\
 }\
 \
 .s17-t { font-size: 14px; font-weight: 700; }\
@@ -267,7 +272,6 @@ body.drag-edit-mode #' + CONFIG.buttonId + ':hover,\
     gap: 4px;\
     align-items: center;\
     flex-shrink: 0;\
-    cursor: default;\
 }\
 \
 .s17-x, .s17-min {\
@@ -417,13 +421,6 @@ body.drag-edit-mode #' + CONFIG.buttonId + ':hover,\
     background: var(--ui-success, #16a34a);\
     border-color: var(--ui-success, #16a34a);\
     color: #fff;\
-    box-shadow: 0 0 0 2px rgba(22,163,74,.35);\
-    animation: s17-pulse 2s infinite;\
-}\
-\
-@keyframes s17-pulse {\
-    0%, 100% { box-shadow: 0 0 0 0 rgba(22, 163, 74, 0.45); }\
-    50% { box-shadow: 0 0 0 4px rgba(22, 163, 74, 0.2); }\
 }\
 \
 \
@@ -511,7 +508,6 @@ body.drag-edit-mode #' + CONFIG.buttonId + ':hover,\
 /* ============ POPUP SUPPRESSION ============ */\
 body.s17-nopopup .ol-popup,\
 body.s17-nopopup #popup,\
-body.s17-nopopup #feature-info-popup,\
 body.s17-nopopup .ol-popup-content,\
 body.s17-nopopup #popup-content,\
 body.s17-nopopup .popup-content,\
@@ -717,7 +713,6 @@ body.s17-nopopup .ol-tooltip {\
         function push(f, l) { if (!f || seen.indexOf(f) !== -1) return; seen.push(f); found.push({ feature: f, layer: l }); }
         m.forEachFeatureAtPixel(pixel, function (feature, layer) {
             if (!layer || layer === S.highlightLayer) return;
-            if (layer.get && layer.get("__s17internal")) return;
             if (restrictLayer && layer !== restrictLayer) return;
             if (!(feature instanceof ol.Feature)) return;
             push(feature, layer);
@@ -725,14 +720,6 @@ body.s17-nopopup .ol-tooltip {\
         if (found.length) return found;
         var coord = m.getCoordinateFromPixel(pixel), res = m.getView().getResolution(), tol = CONFIG.hitTolerance * res;
         var layers = restrictLayer ? [restrictLayer] : vectorLayers();
-        if (S.currentLayer && !restrictLayer) {
-            var ci = layers.indexOf(S.currentLayer);
-            if (ci > 0) {
-                layers = layers.slice();
-                layers.splice(ci, 1);
-                layers.unshift(S.currentLayer);
-            }
-        }
         for (var li = 0; li < layers.length; li++) {
             var layer = layers[li];
             if (layer.getVisible && !layer.getVisible()) continue;
@@ -744,12 +731,8 @@ body.s17-nopopup .ol-tooltip {\
             for (var ci = 0; ci < candidates.length; ci++) {
                 var f = candidates[ci], g = f.getGeometry(); if (!g) continue;
                 var type = g.getType();
-                if (type === "Polygon" || type === "MultiPolygon") {
-                    if (typeof g.intersectsCoordinate === "function" && g.intersectsCoordinate(coord)) push(f, layer);
-                } else {
-                    var cp = g.getClosestPoint(coord);
-                    if (Math.sqrt(Math.pow(cp[0] - coord[0], 2) + Math.pow(cp[1] - coord[1], 2)) <= tol) push(f, layer);
-                }
+                if (type === "Polygon" || type === "MultiPolygon") { if (g.intersectsCoordinate(coord)) push(f, layer); }
+                else { var cp = g.getClosestPoint(coord); if (Math.sqrt(Math.pow(cp[0] - coord[0], 2) + Math.pow(cp[1] - coord[1], 2)) <= tol) push(f, layer); }
             }
             if (found.length) break;
         }
@@ -758,57 +741,19 @@ body.s17-nopopup .ol-tooltip {\
 
     function onMapClick(evt) {
         if (!S.selectActive) return;
-
-        // Prevent click from bubbling to popups or background listeners
+        var hits = featuresAtPixel(evt.pixel, null); if (!hits.length) return;
+        var hit = hits[0], wasEmpty = (S.selection.length === 0);
+        if (wasEmpty && hit.layer && hit.layer !== S.currentLayer) {
+            S.currentLayer = hit.layer;
+            var sel = document.getElementById("s17-layer"); if (sel) sel.value = layerId(hit.layer);
+            refreshFields();
+        }
+        var idx = S.selection.indexOf(hit.feature);
+        if (idx === -1) S.selection.push(hit.feature); else S.selection.splice(idx, 1);
+        if (S.selection.length) { S.exportMode = "selected"; var mSel = document.getElementById("s17-mode"); if (mSel) mSel.value = "selected"; }
+        refreshHighlight();
         if (evt.stopPropagation) evt.stopPropagation();
         if (evt.preventDefault) evt.preventDefault();
-        if (evt.originalEvent) {
-            if (evt.originalEvent.stopPropagation) evt.originalEvent.stopPropagation();
-            if (evt.originalEvent.preventDefault) evt.originalEvent.preventDefault();
-        }
-
-        var hits = featuresAtPixel(evt.pixel, null);
-        if (!hits.length) return;
-
-        var hit = null;
-        if (S.currentLayer) {
-            for (var h = 0; h < hits.length; h++) {
-                if (hits[h].layer === S.currentLayer) {
-                    hit = hits[h];
-                    break;
-                }
-            }
-        }
-
-        if (!hit) {
-            var wasEmpty = (S.selection.length === 0);
-            if (wasEmpty && hits[0].layer && hits[0].layer !== S.currentLayer) {
-                hit = hits[0];
-                S.currentLayer = hit.layer;
-                var sel = document.getElementById("s17-layer");
-                if (sel) sel.value = layerId(hit.layer);
-                refreshFields();
-            } else if (S.currentLayer) {
-                // If features are already selected on current layer, avoid accidentally selecting background layer
-                return;
-            } else {
-                hit = hits[0];
-            }
-        }
-
-        var idx = S.selection.indexOf(hit.feature);
-        if (idx === -1) {
-            S.selection.push(hit.feature);
-        } else {
-            S.selection.splice(idx, 1);
-        }
-
-        if (S.selection.length) {
-            S.exportMode = "selected";
-            var mSel = document.getElementById("s17-mode");
-            if (mSel) mSel.value = "selected";
-        }
-        refreshHighlight();
     }
     onMapClick.__s17own = true;
 
@@ -826,93 +771,30 @@ body.s17-nopopup .ol-tooltip {\
         refreshHighlight();
     }
 
-    function zoomToSelection() {
-        var m = getMap();
-        if (!m) return;
-        var feats = selectedForCurrentLayer();
-        if (!feats.length) feats = S.selection;
-        if (!feats.length) {
-            var st = document.getElementById("s17-status");
-            if (st) st.textContent = "ℹ No features selected to zoom to.";
-            return;
-        }
-        var extent = ol.extent.createEmpty();
-        for (var i = 0; i < feats.length; i++) {
-            var g = feats[i].getGeometry();
-            if (g) ol.extent.extend(extent, g.getExtent());
-        }
-        if (!ol.extent.isEmpty(extent)) {
-            m.getView().fit(extent, {
-                padding: [50, 50, 50, 50],
-                duration: 400,
-                maxZoom: 19
-            });
-        }
-    }
-
     function enableSelection() {
         var m = getMap(); if (!m || S.selectActive) return;
-        S.selectActive = true;
-        window.stage17SelectActive = true;
-        if (typeof window.closeFeaturePopup === "function") window.closeFeaturePopup();
-        ensureHighlightLayer();
-        syncPopups();
-
-        if (S.clickKey) { ol.Observable.unByKey(S.clickKey); S.clickKey = null; }
+        S.selectActive = true; ensureHighlightLayer(); syncPopups();
         S.clickKey = m.on("singleclick", onMapClick);
-
         if (!S.dragBox) {
-            S.dragBox = new ol.interaction.DragBox({
-                condition: ol.events.condition.shiftKeyOnly,
-                className: "s17-dragbox"
-            });
-            S.dragBox.on("boxend", function () {
-                selectByExtent(S.dragBox.getGeometry().getExtent(), true);
-                S.exportMode = "selected";
-                var el = document.getElementById("s17-mode");
-                if (el) el.value = "selected";
-            });
+            S.dragBox = new ol.interaction.DragBox({ condition: ol.events.condition.shiftKeyOnly, className: "s17-dragbox" });
+            S.dragBox.on("boxend", function () { selectByExtent(S.dragBox.getGeometry().getExtent(), true); S.exportMode = "selected"; var el = document.getElementById("s17-mode"); if (el) el.value = "selected"; });
         }
-        if (m.getInteractions().getArray().indexOf(S.dragBox) === -1) {
-            m.addInteraction(S.dragBox);
-        }
-
-        var target = m.getTargetElement ? m.getTargetElement() : (typeof m.getTarget === "function" ? document.getElementById(m.getTarget()) : null);
-        if (target) target.style.cursor = "crosshair";
+        m.addInteraction(S.dragBox);
+        m.getTargetElement().style.cursor = "crosshair";
         updateSelectionUI();
     }
 
     function disableSelection() {
-        var m = getMap();
+        var m = getMap(); if (!m || !S.selectActive) return;
         S.selectActive = false;
-        window.stage17SelectActive = false;
         if (S.clickKey) { ol.Observable.unByKey(S.clickKey); S.clickKey = null; }
-        if (m) {
-            if (S.dragBox) m.removeInteraction(S.dragBox);
-            var target = m.getTargetElement ? m.getTargetElement() : (typeof m.getTarget === "function" ? document.getElementById(m.getTarget()) : null);
-            if (target) target.style.cursor = "";
-        }
-        syncPopups();
-        updateSelectionUI();
+        if (S.dragBox) m.removeInteraction(S.dragBox);
+        m.getTargetElement().style.cursor = "";
+        syncPopups(); updateSelectionUI();
     }
 
     function toggleSelection() { S.selectActive ? disableSelection() : enableSelection(); }
-
-    function clearSelection() {
-        S.selection = [];
-        if (S.currentLayer && S.currentLayer.getSource()) {
-            try {
-                var feats = S.currentLayer.getSource().getFeatures();
-                for (var i = 0; i < feats.length; i++) {
-                    var f = feats[i];
-                    f.unset("__selected", true);
-                    f.unset("selected", true);
-                    f.unset("_selected", true);
-                }
-            } catch (e) {}
-        }
-        refreshHighlight();
-    }
+    function clearSelection() { S.selection = []; refreshHighlight(); }
 
     function externalSelection() {
         var m = getMap(), out = []; if (!m) return out;
@@ -1143,7 +1025,7 @@ body.s17-nopopup .ol-tooltip {\
     function sanitizeDbfFields(records) { var seen = {}, fields = []; records.forEach(function (r) { Object.keys(r.properties).forEach(function (k) { if (seen[k]) return; seen[k] = true; var clean = k.replace(/[^a-zA-Z0-9_]/g, "_").substring(0, 10) || "FIELD"; var fn = clean, counter = 1; while (fields.some(function (f) { return f.name === fn; })) { var suffix = String(counter++); fn = clean.substring(0, 10 - suffix.length) + suffix; } var isNum = true, maxBL = 1, maxDec = 0; for (var i = 0; i < records.length; i++) { var val = records[i].properties[k]; if (val !== undefined && val !== null && val !== "") { var bytes = stringToUtf8Bytes(String(val)); if (bytes.length > maxBL) maxBL = bytes.length; if (isNaN(Number(val)) || typeof val === "boolean") isNum = false; else { var parts = String(val).split("."); if (parts.length > 1 && parts[1].length > maxDec) maxDec = parts[1].length; } } } if (isNum && maxBL <= 18) fields.push({ key: k, name: fn, type: 'N', length: Math.min(18, Math.max(10, maxBL + 2)), decimals: Math.min(6, maxDec) }); else fields.push({ key: k, name: fn, type: 'C', length: Math.min(254, Math.max(1, maxBL)), decimals: 0 }); }); }); return fields; }
     function createDbfBuffer(records, fields) { var recordLen = 1; fields.forEach(function (f) { recordLen += f.length; }); var headerLen = 32 + (32 * fields.length) + 1; var totalSize = headerLen + (records.length * recordLen) + 1; var buf = new ArrayBuffer(totalSize); var view = new DataView(buf); var now = new Date(); view.setUint8(0, 0x03); view.setUint8(1, (now.getFullYear() - 1900) & 0xFF); view.setUint8(2, (now.getMonth() + 1) & 0xFF); view.setUint8(3, now.getDate() & 0xFF); view.setUint32(4, records.length, true); view.setUint16(8, headerLen, true); view.setUint16(10, recordLen, true); var fO = 32; fields.forEach(function (f) { for (var i = 0; i < 11; i++) view.setUint8(fO + i, i < f.name.length ? (f.name.charCodeAt(i) & 0x7F) : 0); view.setUint8(fO + 11, f.type.charCodeAt(0)); view.setUint8(fO + 16, f.length); view.setUint8(fO + 17, f.decimals); fO += 32; }); view.setUint8(fO, 0x0D); var rO = headerLen; records.forEach(function (r) { view.setUint8(rO, 0x20); var cO = rO + 1; fields.forEach(function (f) { var val = r.properties[f.key]; var bytes; if (val !== undefined && val !== null) { if (f.type === 'N') { var n = Number(val); var str = isNaN(n) ? "" : n.toFixed(f.decimals); while (str.length < f.length) str = " " + str; bytes = stringToUtf8Bytes(str); } else bytes = stringToUtf8Bytes(String(val)); } else bytes = new Uint8Array(0); if (f.type === 'N') { var pad = f.length - bytes.length; for (var i = 0; i < f.length; i++) view.setUint8(cO + i, i < pad ? 0x20 : bytes[i - pad]); } else { for (var j = 0; j < f.length; j++) view.setUint8(cO + j, j < bytes.length ? bytes[j] : 0x20); } cO += f.length; }); rO += recordLen; }); view.setUint8(rO, 0x1A); return buf; }
     function geomToRings(geom) { var t = geom.getType(), rings = []; if (t === "Polygon") rings = geom.getCoordinates(); else if (t === "MultiPolygon") { var ps = geom.getCoordinates(); for (var p = 0; p < ps.length; p++) for (var r = 0; r < ps[p].length; r++) rings.push(ps[p][r]); } else if (t === "LineString") rings = [geom.getCoordinates()]; else if (t === "MultiLineString") rings = geom.getCoordinates(); return rings; }
-    function buildPointShapefile(records, srcCRS) { var n = records.length; var shxS = 100 + n * 8, shpS = 100 + n * 28; var shpB = new ArrayBuffer(shpS), shpV = new DataView(shpB), shxB = new ArrayBuffer(shxS), shxV = new DataView(shxB); var mnX = Infinity, mnY = Infinity, mxX = -Infinity, mxY = -Infinity; var coords = []; for (var i = 0; i < n; i++) { var g = transformGeom(records[i].srcGeom, srcCRS, "EPSG:4326"); var pt = (g && g.getType() === "Point") ? g.getCoordinates() : (records[i].labelMap ? transformGeom(new ol.geom.Point(records[i].labelMap), srcCRS, "EPSG:4326").getCoordinates() : [0,0]); coords.push(pt); if (pt[0] < mnX) mnX = pt[0]; if (pt[0] > mxX) mxX = pt[0]; if (pt[1] < mnY) mnY = pt[1]; if (pt[1] > mxY) mxY = pt[1]; } if (!n || !isFinite(mnX)) mnX = mnY = mxX = mxY = 0; function wH(v, bytes) { v.setInt32(0, 9994, false); v.setInt32(24, bytes / 2, false); v.setInt32(28, 1000, true); v.setInt32(32, 1, true); v.setFloat64(36, mnX, true); v.setFloat64(44, mnY, true); v.setFloat64(52, mxX, true); v.setFloat64(60, mxY, true); } wH(shpV, shpS); wH(shxV, shxS); var sO = 100, xO = 100; for (var j = 0; j < n; j++) { var c = coords[j]; shxV.setInt32(xO, sO / 2, false); shxV.setInt32(xO + 4, 10, false); xO += 8; shpV.setInt32(sO, j + 1, false); shpV.setInt32(sO + 4, 10, false); sO += 8; shpV.setInt32(sO, 1, true); shpV.setFloat64(sO + 4, c[0], true); shpV.setFloat64(sO + 12, c[1], true); sO += 20; } return { shp: shpB, shx: shxB }; }
+    function buildPointShapefile(records, srcCRS) { var n = records.length; var shxS = 100 + n * 8, shpS = 100 + n * 28; var shpB = new ArrayBuffer(shpS), shpV = new DataView(shpB), shxB = new ArrayBuffer(shxS), shxV = new DataView(shxB); var mnX = Infinity, mnY = Infinity, mxX = -Infinity, mxY = -Infinity; var coords = []; for (var i = 0; i < n; i++) { var g = records[i].geometry || records[i].srcGeom; var pt = (g.getType() === "Point") ? g.getCoordinates() : records[i].labelTgt || [0,0]; coords.push(pt); if (pt[0] < mnX) mnX = pt[0]; if (pt[0] > mxX) mxX = pt[0]; if (pt[1] < mnY) mnY = pt[1]; if (pt[1] > mxY) mxY = pt[1]; } if (!n) mnX = mnY = mxX = mxY = 0; function wH(v, bytes) { v.setInt32(0, 9994, false); v.setInt32(24, bytes / 2, false); v.setInt32(28, 1000, true); v.setInt32(32, 1, true); v.setFloat64(36, mnX, true); v.setFloat64(44, mnY, true); v.setFloat64(52, mxX, true); v.setFloat64(60, mxY, true); } wH(shpV, shpS); wH(shxV, shxS); var sO = 100, xO = 100; for (var j = 0; j < n; j++) { var c = coords[j]; shxV.setInt32(xO, sO / 2, false); shxV.setInt32(xO + 4, 10, false); xO += 8; shpV.setInt32(sO, j + 1, false); shpV.setInt32(sO + 4, 10, false); sO += 8; shpV.setInt32(sO, 1, true); shpV.setFloat64(sO + 4, c[0], true); shpV.setFloat64(sO + 12, c[1], true); sO += 20; } return { shp: shpB, shx: shxB }; }
     function buildPolyShapefile(records, srcCRS, isPoly) { var sT = isPoly ? 5 : 3; var n = records.length; var shxS = 100 + n * 8; var parsed = [], tSB = 100; var gMnX = Infinity, gMnY = Infinity, gMxX = -Infinity, gMxY = -Infinity; for (var i = 0; i < n; i++) { var g = transformGeom(records[i].srcGeom, srcCRS, "EPSG:4326"); var raw = geomToRings(g); var parts = [], tP = 0; var rMnX = Infinity, rMnY = Infinity, rMxX = -Infinity, rMxY = -Infinity; for (var pi = 0; pi < raw.length; pi++) { var ring = raw[pi].slice(); if (isPoly && ring.length > 0) { var f = ring[0], l = ring[ring.length - 1]; if (f[0] !== l[0] || f[1] !== l[1]) ring.push([f[0], f[1]]); } if (!ring.length) continue; for (var k = 0; k < ring.length; k++) { var x = ring[k][0], y = ring[k][1]; if (x < rMnX) rMnX = x; if (x > rMxX) rMxX = x; if (y < rMnY) rMnY = y; if (y > rMxY) rMxY = y; } tP += ring.length; parts.push(ring); } if (rMnX < gMnX) gMnX = rMnX; if (rMxX > gMxX) gMxX = rMxX; if (rMnY < gMnY) gMnY = rMnY; if (rMxY > gMxY) gMxY = rMxY; var cB = 44 + (4 * parts.length) + (16 * tP); tSB += (8 + cB); parsed.push({ parts: parts, totalPts: tP, minX: rMnX, minY: rMnY, maxX: rMxX, maxY: rMxY, contentBytes: cB }); } if (!n) gMnX = gMnY = gMxX = gMxY = 0; var shpB = new ArrayBuffer(tSB), shpV = new DataView(shpB), shxB = new ArrayBuffer(shxS), shxV = new DataView(shxB); function wH(v, bytes) { v.setInt32(0, 9994, false); v.setInt32(24, bytes / 2, false); v.setInt32(28, 1000, true); v.setInt32(32, sT, true); v.setFloat64(36, gMnX, true); v.setFloat64(44, gMnY, true); v.setFloat64(52, gMxX, true); v.setFloat64(60, gMxY, true); } wH(shpV, tSB); wH(shxV, shxS); var sO = 100, xO = 100; for (var j = 0; j < n; j++) { var item = parsed[j]; var wO = sO / 2, wC = item.contentBytes / 2; shxV.setInt32(xO, wO, false); shxV.setInt32(xO + 4, wC, false); xO += 8; shpV.setInt32(sO, j + 1, false); shpV.setInt32(sO + 4, wC, false); sO += 8; shpV.setInt32(sO, sT, true); shpV.setFloat64(sO + 4, item.minX, true); shpV.setFloat64(sO + 12, item.minY, true); shpV.setFloat64(sO + 20, item.maxX, true); shpV.setFloat64(sO + 28, item.maxY, true); shpV.setInt32(sO + 36, item.parts.length, true); shpV.setInt32(sO + 40, item.totalPts, true); var pIO = sO + 44, ptO = pIO + (4 * item.parts.length), rI = 0; for (var pI = 0; pI < item.parts.length; pI++) { shpV.setInt32(pIO + (4 * pI), rI, true); var pR = item.parts[pI]; for (var ptI = 0; ptI < pR.length; ptI++) { shpV.setFloat64(ptO, pR[ptI][0], true); shpV.setFloat64(ptO + 8, pR[ptI][1], true); ptO += 16; rI++; } } sO += item.contentBytes; } return { shp: shpB, shx: shxB }; }
     function exportSHP(records) { return loadScript(CONFIG.jszipCDN, "JSZip").then(function (JSZip) { var src = mapCRS(); var zip = new JSZip(); var bN = baseName(); var polys = [], lines = [], points = []; records.forEach(function (r) { var t = r.geomType; if (t === "Polygon" || t === "MultiPolygon") polys.push(r); else if (t === "LineString" || t === "MultiLineString") lines.push(r); else points.push(r); }); function add(name, recs, isPoly, isPt) { if (!recs.length) return; var shpData = isPt ? buildPointShapefile(recs, src) : buildPolyShapefile(recs, src, isPoly); var fields = sanitizeDbfFields(recs); var dbfData = createDbfBuffer(recs, fields); zip.file(name + ".shp", shpData.shp); zip.file(name + ".shx", shpData.shx); zip.file(name + ".dbf", dbfData); zip.file(name + ".prj", PRJ_WGS84); zip.file(name + ".cpg", "UTF-8"); } if (polys.length) add(bN + "_polygons", polys, true, false); if (lines.length) add(bN + "_lines", lines, false, false); if (points.length) add(bN + "_points", points, false, true); if (checked("s17-labels")) { var lr = []; records.forEach(function (r) { if (!r.labelMap) return; lr.push({ geometry: new ol.geom.Point(transformGeom(new ol.geom.Point(r.labelMap), src, "EPSG:4326").getCoordinates()), srcGeom: new ol.geom.Point(r.labelMap), properties: { EXPORT_ID: r.properties.Export_ID, LABEL: r.labelText, FTYPE: "LABEL" } }); }); if (lr.length) add(bN + "_labels", lr, false, true); } return zip.generateAsync({ type: "blob", mimeType: "application/zip", compression: "DEFLATE", compressionOptions: { level: 9 } }); }).then(function (blob) { downloadBlob(blob, baseName() + "_shp.zip"); }); }
 
@@ -1167,16 +1049,6 @@ body.s17-nopopup .ol-tooltip {\
         if (!panel || !button || !S.panelOpen) return;
         var pad = 8, vw = window.innerWidth, vh = window.innerHeight;
         var b = button.getBoundingClientRect();
-
-        if (panel.dataset.dragged === "true") {
-            var r = panel.getBoundingClientRect();
-            var curL = Math.max(pad, Math.min(vw - (r.width || 200) - pad, r.left));
-            var curT = Math.max(pad, Math.min(vh - (r.height || 40) - pad, r.top));
-            panel.style.left = Math.round(curL) + "px";
-            panel.style.top = Math.round(curT) + "px";
-            return;
-        }
-
         if (vw <= 600) {
             if (!S.panelMinimized) {
                 panel.style.width = (vw - 16) + "px"; panel.style.left = "8px"; panel.style.right = "auto";
@@ -1230,15 +1102,30 @@ body.s17-nopopup .ol-tooltip {\
         if (panel) {
             panel.classList.remove("stage17-visible");
             panel.classList.remove("stage17-minimized");
-            delete panel.dataset.dragged;
         }
         if (button) button.classList.remove("stage17-open");
-        disableSelection(); syncPopups();
+        disableSelection();
+        var m = getMap();
+        if (m && S.dragBox) m.removeInteraction(S.dragBox);
+        if (m && m.getTargetElement()) m.getTargetElement().style.cursor = "";
+        S.selection = [];
+        if (S.highlightLayer) {
+            S.highlightLayer.getSource().clear();
+            S.highlightLayer.setMap(null);
+            S.highlightLayer = null;
+        }
+        S.exportMode = "all";
+        var mode = document.getElementById("s17-mode");
+        if (mode) mode.value = "all";
+        if (panel) panel.classList.remove("stage17-selected-mode");
+        syncPopups();
+        updateSelectionUI();
     }
     function togglePanel() { S.panelOpen ? closePanel() : openPanel(); }
 
     function toggleMinimize() {
         if (!panel || !S.panelOpen) return;
+        var restoring = S.panelMinimized;
         S.panelMinimized = !S.panelMinimized;
         panel.classList.toggle("stage17-minimized", S.panelMinimized);
         var btn = document.getElementById("s17-min");
@@ -1246,67 +1133,8 @@ body.s17-nopopup .ol-tooltip {\
             btn.textContent = S.panelMinimized ? "▢" : "–";
             btn.title = S.panelMinimized ? "Restore" : "Minimize";
         }
+        if (restoring && S.selectActive) disableSelection();
         requestAnimationFrame(positionPanel);
-    }
-
-    function makePanelDraggable() {
-        if (!panel) return;
-        var head = panel.querySelector(".s17-head");
-        if (!head) return;
-
-        var isDragging = false;
-        var startX = 0, startY = 0;
-        var startLeft = 0, startTop = 0;
-
-        function onPointerDown(e) {
-            if (e.target.closest(".s17-head-btns")) return;
-            isDragging = true;
-            panel.dataset.dragged = "true";
-            var pt = e.touches ? e.touches[0] : e;
-            startX = pt.clientX;
-            startY = pt.clientY;
-            var rect = panel.getBoundingClientRect();
-            startLeft = rect.left;
-            startTop = rect.top;
-
-            document.addEventListener("mousemove", onPointerMove);
-            document.addEventListener("mouseup", onPointerUp);
-            document.addEventListener("touchmove", onPointerMove, { passive: false });
-            document.addEventListener("touchend", onPointerUp);
-            e.preventDefault();
-        }
-
-        function onPointerMove(e) {
-            if (!isDragging) return;
-            var pt = e.touches ? e.touches[0] : e;
-            var dx = pt.clientX - startX;
-            var dy = pt.clientY - startY;
-
-            var vw = window.innerWidth;
-            var vh = window.innerHeight;
-            var pw = panel.offsetWidth;
-            var ph = panel.offsetHeight;
-
-            var newLeft = Math.max(0, Math.min(vw - pw, startLeft + dx));
-            var newTop = Math.max(0, Math.min(vh - ph, startTop + dy));
-
-            panel.style.left = Math.round(newLeft) + "px";
-            panel.style.top = Math.round(newTop) + "px";
-            panel.style.right = "auto";
-            panel.style.bottom = "auto";
-        }
-
-        function onPointerUp() {
-            if (!isDragging) return;
-            isDragging = false;
-            document.removeEventListener("mousemove", onPointerMove);
-            document.removeEventListener("mouseup", onPointerUp);
-            document.removeEventListener("touchmove", onPointerMove);
-            document.removeEventListener("touchend", onPointerUp);
-        }
-
-        head.addEventListener("mousedown", onPointerDown);
-        head.addEventListener("touchstart", onPointerDown, { passive: false });
     }
 
     /* ========================================================
@@ -1349,16 +1177,15 @@ body.s17-nopopup .ol-tooltip {\
 
 '<label>Layer</label><select id="s17-layer"></select>' +
 
+'<div class="s17-map-selection">' +
 '<div class="s17-sec">🖱 Map Selection</div>' +
-'<div class="s17-row" style="margin-bottom:6px;">' +
-'<button type="button" id="s17-selmode" class="s17-btn" title="Toggle click-to-select mode on the map">🎯 Select Features</button>' +
-'<button type="button" id="s17-selzoom" class="s17-btn" title="Zoom to selected features">🔍 Zoom To</button>' +
-'</div>' +
 '<div class="s17-row" style="margin-bottom:8px;">' +
-'<button type="button" id="s17-selview" class="s17-btn" title="Select all features currently in map view">👁 All in View</button>' +
-'<button type="button" id="s17-selclear" class="s17-btn" title="Clear selection">🗑 Clear</button>' +
+'<button type="button" id="s17-selmode" class="s17-btn">Select</button>' +
+'<button type="button" id="s17-selclear" class="s17-btn">Clear</button>' +
+'<button type="button" id="s17-selview" class="s17-btn">All in View</button>' +
 '</div>' +
-'<div id="s17-selinfo" class="s17-info warn">Selection is off. Click <b>Select Features</b> to pick items directly on the map.</div>' +
+'<div id="s17-selinfo" class="s17-info warn">Selection off</div>' +
+'</div>' +
 
 '<label style="margin-top:8px;">Features to export</label>' +
 '<select id="s17-mode"><option value="all">All Features</option><option value="selected">Selected Features</option><option value="extent">Current Map Extent</option></select>' +
@@ -1412,7 +1239,6 @@ body.s17-nopopup .ol-tooltip {\
 '</div>';
 
         document.body.appendChild(panel);
-        makePanelDraggable();
         bindPanelEvents();
     }
 
@@ -1431,7 +1257,7 @@ body.s17-nopopup .ol-tooltip {\
 
         document.getElementById("s17-mode").onchange = function () {
             S.exportMode = this.value;
-            if (this.value === "selected" && !S.selectActive) enableSelection();
+            syncExportModeUI();
             updateSelectionUI();
         };
 
@@ -1448,14 +1274,21 @@ body.s17-nopopup .ol-tooltip {\
             document.getElementById("s17-custom-crs").style.display = this.value === "custom" ? "block" : "none";
         };
 
-        document.getElementById("s17-selmode").onclick = toggleSelection;
+        document.getElementById("s17-selmode").onclick = function () {
+            if (S.selectActive) {
+                disableSelection();
+                return;
+            }
+            enableSelection();
+            if (S.selectActive) toggleMinimize();
+        };
         document.getElementById("s17-selclear").onclick = clearSelection;
-        document.getElementById("s17-selzoom").onclick = zoomToSelection;
         document.getElementById("s17-selview").onclick = function () {
             var m = getMap(); if (!m) return;
             selectByExtent(m.getView().calculateExtent(m.getSize()), false);
             S.exportMode = "selected";
             document.getElementById("s17-mode").value = "selected";
+            syncExportModeUI();
         };
 
         document.getElementById("s17-go").onclick = runExport;
@@ -1507,6 +1340,7 @@ body.s17-nopopup .ol-tooltip {\
         document.addEventListener("maptool:editmode", function (e) { if (e.detail && e.detail.active) closePanel(); });
         document.addEventListener("maptool:visibility", function (e) { if (e.detail && e.detail.id === CONFIG.toolId && !e.detail.visible) closePanel(); });
         document.addEventListener("keydown", function (e) { if (e.key === "Escape" && S.panelOpen) closePanel(); });
+        document.addEventListener("click", function (e) { if (!S.panelOpen) return; if (!panel) return; if (panel.contains(e.target)) return; if (button && button.contains(e.target)) return; var m = getMap(), target = m && m.getTargetElement(); if (S.selectActive && target && target.contains(e.target)) return; closePanel(); });
         window.addEventListener("beforeunload", function () { try { restorePopups(); } catch (e) {} });
     }
 
@@ -1514,56 +1348,20 @@ body.s17-nopopup .ol-tooltip {\
        22. UI REFRESH
        ======================================================== */
     function updateSelectionUI() {
-        var info = document.getElementById("s17-selinfo");
-        var btn = document.getElementById("s17-selmode");
-        var zoomBtn = document.getElementById("s17-selzoom");
+        var info = document.getElementById("s17-selinfo"), btn = document.getElementById("s17-selmode");
+        syncExportModeUI();
         if (!info || !btn) return;
-
-        btn.textContent = S.selectActive ? "✔ Selecting..." : "🎯 Select Features";
+        btn.textContent = S.selectActive ? "✔ Selecting" : "Select";
         btn.className = "s17-btn" + (S.selectActive ? " on" : "");
-        btn.title = S.selectActive ? "Click to deactivate feature selection on the map" : "Click to select features on the map";
+        var n = selectedForCurrentLayer().length, other = S.selection.length - n;
+        if (n > 0) { info.className = "s17-info ok"; info.innerHTML = "✔ <b>" + n + "</b> feature(s) selected in <b>" + (S.currentLayer ? layerName(S.currentLayer) : "-") + "</b>" + (other > 0 ? "<br><span style='opacity:.8'>" + other + " in other layer(s)</span>" : "") + "<br><span style='opacity:.8'>Click a feature again to unselect it.</span>"; }
+        else if (S.selectActive) { info.className = "s17-info warn"; info.innerHTML = "🖱 <b>Click</b> to select · <b>Click again</b> to unselect<br>Clicking another feature <b>adds</b> it · <b>Shift+Drag</b> = box select<br><span style='opacity:.8'>Popups are disabled while selecting.</span>"; }
+        else { info.className = "s17-info warn"; info.innerHTML = "Selection is off — click <b>Select</b> to pick features on the map."; }
+    }
 
-        var selected = selectedForCurrentLayer();
-        var n = selected.length;
-        var other = S.selection.length - n;
-
-        if (zoomBtn) {
-            zoomBtn.disabled = (n === 0 && other === 0);
-            zoomBtn.style.opacity = (n === 0 && other === 0) ? "0.6" : "1";
-        }
-
-        if (n > 0) {
-            var totalArea = 0;
-            var polyCount = 0;
-            var src = mapCRS();
-            for (var i = 0; i < selected.length; i++) {
-                var geom = selected[i].getGeometry();
-                if (geom && (geom.getType() === "Polygon" || geom.getType() === "MultiPolygon")) {
-                    var a = geodesicArea(geom, src);
-                    if (a) { totalArea += a; polyCount++; }
-                }
-            }
-
-            var areaHtml = "";
-            if (polyCount > 0 && totalArea > 0) {
-                var m2Str = totalArea.toLocaleString(undefined, { maximumFractionDigits: 1 }) + " m²";
-                var acreStr = (totalArea / 4046.8564224).toFixed(3) + " acres";
-                var haStr = (totalArea / 10000).toFixed(3) + " ha";
-                areaHtml = "<div style='margin-top:3px;font-size:10px;opacity:.9;'>📐 <b>Total Area:</b> " + m2Str + " (" + acreStr + " · " + haStr + ")</div>";
-            }
-
-            info.className = "s17-info ok";
-            info.innerHTML = "✔ <b>" + n + "</b> feature(s) selected in <b>" + (S.currentLayer ? layerName(S.currentLayer) : "-") + "</b>" +
-                (other > 0 ? "<br><span style='opacity:.8'>" + other + " in other layer(s)</span>" : "") +
-                areaHtml +
-                "<div style='margin-top:3px;font-size:10px;opacity:.8;'>Click a feature to unselect · Shift+Drag = box select</div>";
-        } else if (S.selectActive) {
-            info.className = "s17-info warn";
-            info.innerHTML = "🎯 <b>Selection Active</b><br>Click features on map to select/unselect.<br><b>Shift + Drag</b> for box selection.<br><span style='opacity:.8'>Popups are disabled while selecting.</span>";
-        } else {
-            info.className = "s17-info warn";
-            info.innerHTML = "Selection is off. Click <b>Select Features</b> to pick items directly on the map.";
-        }
+    function syncExportModeUI() {
+        if (!panel) return;
+        panel.classList.toggle("stage17-selected-mode", S.exportMode === "selected");
     }
 
     function refreshLabelFieldDropdown() {
@@ -1712,7 +1510,6 @@ body.s17-nopopup .ol-tooltip {\
         minimize: toggleMinimize,
         enableSelection: enableSelection, disableSelection: disableSelection,
         clearSelection: clearSelection,
-        zoomToSelection: zoomToSelection,
         getSelection: function () { return S.selection.slice(); },
         suppressPopups: suppressPopups, restorePopups: restorePopups,
         refresh: refreshPanel, repositionPanel: positionPanel
@@ -1729,7 +1526,7 @@ body.s17-nopopup .ol-tooltip {\
             if (getMap()) {
                 ensureHighlightLayer(); refreshPanel();
                 setInterval(function () { if (S.panelOpen) updateSelectionUI(); }, 1500);
-                console.log("📤 Stage 17 v5.3 — Advanced Export READY (Production Ready).");
+                console.log("📤 Stage 17 v5.2 — Advanced Export READY (with minimize).");
                 return;
             }
             if (++tries > 50) { console.error("📤 Stage 17: map not found after 30s."); return; }
