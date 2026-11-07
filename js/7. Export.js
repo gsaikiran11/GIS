@@ -1,15 +1,12 @@
 // ============================================================
-// 📤 STAGE 17 — ADVANCED EXPORT TOOL  (v5.1)
+// 📤 STAGE 17 — ADVANCED EXPORT TOOL  (v5.2)
 // ============================================================
 // QGIS2WEB + OPENLAYERS  —  SINGLE FILE, DROP-IN
 //
-// v5.1 CHANGELOG
-//  ✔ Label field dropdown — pick which attribute to show as label
-//  ✔ "Auto" option guesses intelligently (name, survey_no, etc.)
-//  ✔ "Export_ID" option uses the sequential export number
-//  ✔ "Custom text" option for a fixed label on all features
-//  ✔ Dropdown refreshes when layer or fields change
-//  ✔ All v5.0 features preserved (drag, hide, panel follows button)
+// v5.2 CHANGELOG
+//  ✔ Minimize button — collapse panel to just the header bar
+//  ✔ Restore button appears when minimized
+//  ✔ All v5.1 features preserved
 //
 // EXPORT FORMATS
 //   GeoJSON · JSON · CSV · WKT · KML · KMZ · DXF · Shapefile ZIP
@@ -86,7 +83,8 @@
         exportMode:   "all",
         exportFormat: "GeoJSON",
         exportCRS:    "current",
-        panelOpen:    false
+        panelOpen:    false,
+        panelMinimized: false
     };
 
     var button = null;
@@ -214,11 +212,27 @@ body.drag-edit-mode #' + CONFIG.buttonId + ':hover,\
     display: none;\
     flex-direction: column;\
     box-sizing: border-box;\
+\
+    transition: width .18s ease, max-height .18s ease;\
 }\
 \
 #' + CONFIG.panelId + '.stage17-visible {\
     display: flex;\
     animation: stage17-fade .16s ease;\
+}\
+\
+#' + CONFIG.panelId + '.stage17-minimized {\
+    width: auto !important;\
+    min-width: 240px;\
+    max-height: none !important;\
+}\
+\
+#' + CONFIG.panelId + '.stage17-minimized .s17-body {\
+    display: none !important;\
+}\
+\
+#' + CONFIG.panelId + '.stage17-minimized .s17-head {\
+    border-radius: var(--ui-radius, 10px);\
 }\
 \
 @keyframes stage17-fade {\
@@ -245,17 +259,29 @@ body.drag-edit-mode #' + CONFIG.buttonId + ':hover,\
 .s17-t { font-size: 14px; font-weight: 700; }\
 .s17-st { font-size: 10px; opacity: .7; margin-top: 1px; }\
 \
-.s17-x {\
+.s17-head-btns {\
+    display: flex;\
+    gap: 4px;\
+    align-items: center;\
+    flex-shrink: 0;\
+}\
+\
+.s17-x, .s17-min {\
     width: 26px; height: 26px; flex-shrink: 0;\
     border: none; border-radius: 5px;\
     background: rgba(255,255,255,.15);\
-    color: #fff; font-size: 18px; line-height: 1;\
+    color: #fff; font-size: 16px; line-height: 1;\
     cursor: pointer;\
     display: flex; align-items: center; justify-content: center;\
     transition: background .13s ease;\
+    padding: 0;\
+    font-family: inherit;\
 }\
 \
-.s17-x:hover { background: rgba(255,255,255,.3); }\
+.s17-x { font-size: 18px; }\
+.s17-min { font-size: 14px; font-weight: 700; }\
+\
+.s17-x:hover, .s17-min:hover { background: rgba(255,255,255,.3); }\
 \
 \
 /* ============ BODY ============ */\
@@ -818,30 +844,25 @@ body.s17-nopopup .ol-tooltip {\
     function resolveLabelText(feature, exportId, sym, props) {
         var choice = getLabelFieldChoice();
 
-        // Style text override (from the OL style itself)
         if (choice === "__STYLE__" && sym && sym.text) {
             return String(sym.text);
         }
 
-        // Custom fixed text
         if (choice === "__CUSTOM__") {
             var custom = getCustomLabelText();
             return custom || ("F" + exportId);
         }
 
-        // Export_ID
         if (choice === "__EXPORT_ID__") {
             return "F" + exportId;
         }
 
-        // Specific field
         if (choice !== "__AUTO__" && choice !== "__STYLE__") {
             var val = props[choice];
             if (val !== undefined && val !== null && val !== "") return String(val);
             return "F" + exportId;
         }
 
-        // Auto: try style text first, then preferred fields, then Export_ID
         if (sym && sym.text) return String(sym.text);
 
         for (var i = 0; i < CONFIG.preferredLabelFields.length; i++) {
@@ -930,7 +951,6 @@ body.s17-nopopup .ol-tooltip {\
             var sym = null;
             if (keepStyle) { var lyr = findFeatureLayer(f) || S.currentLayer; sym = extractSymbol(f, lyr, res); }
 
-            // ★ Use the label field dropdown
             var labelText = resolveLabelText(f, rec.Export_ID, sym, props);
 
             if (wantLabels && lblTgt) { rec.Label = labelText; rec.Label_X = num(lblTgt[0]); rec.Label_Y = num(lblTgt[1]); }
@@ -952,9 +972,7 @@ body.s17-nopopup .ol-tooltip {\
     function baseName() { var n = S.currentLayer ? layerName(S.currentLayer) : "export"; return n.replace(/[^a-zA-Z0-9_\-]/g, "_").substring(0, 45) || "export"; }
 
     /* ========================================================
-       14. ALL EXPORTERS (GeoJSON / JSON / CSV / WKT / KML / KMZ / DXF / SHP)
-       --------------------------------------------------------
-       IDENTICAL to v5.0 — all exporter code unchanged.
+       14. ALL EXPORTERS
        ======================================================== */
     function applySimpleStyle(f, sym) { if (!sym) return; var op = sym.opacity === undefined ? 1 : sym.opacity; if (sym.fill) { f.set("fill", partsToHex(sym.fill)); f.set("fill-opacity", +((sym.fill.a === undefined ? 1 : sym.fill.a) * op).toFixed(3)); f.set("marker-color", partsToHex(sym.fill)); } if (sym.stroke) { f.set("stroke", partsToHex(sym.stroke)); f.set("stroke-opacity", +((sym.stroke.a === undefined ? 1 : sym.stroke.a) * op).toFixed(3)); f.set("stroke-width", sym.width || 1); } if (sym.radius) f.set("marker-radius", sym.radius); }
     function recordsToOlFeatures(records, includeLabels, keepStyle) { var out = []; for (var i = 0; i < records.length; i++) { var r = records[i], f = new ol.Feature({ geometry: r.geometry.clone() }); for (var k in r.properties) if (r.properties.hasOwnProperty(k)) f.set(k, r.properties[k]); if (keepStyle) applySimpleStyle(f, r.style); out.push(f); } if (includeLabels) { for (var j = 0; j < records.length; j++) { var rr = records[j]; if (!rr.labelTgt) continue; var lf = new ol.Feature({ geometry: new ol.geom.Point(rr.labelTgt) }); lf.set("Export_ID", rr.properties.Export_ID); lf.set("Label", rr.labelText); lf.set("FeatureType", "LABEL_POINT"); lf.set("marker-opacity", 0); out.push(lf); } } return out; }
@@ -1024,11 +1042,23 @@ body.s17-nopopup .ol-tooltip {\
         var pad = 8, vw = window.innerWidth, vh = window.innerHeight;
         var b = button.getBoundingClientRect();
         if (vw <= 600) {
-            panel.style.width = (vw - 16) + "px"; panel.style.left = "8px"; panel.style.right = "auto";
-            panel.style.top = "8px"; panel.style.bottom = "auto"; panel.style.maxHeight = (vh - 16) + "px"; return;
+            if (!S.panelMinimized) {
+                panel.style.width = (vw - 16) + "px"; panel.style.left = "8px"; panel.style.right = "auto";
+                panel.style.top = "8px"; panel.style.bottom = "auto"; panel.style.maxHeight = (vh - 16) + "px";
+            } else {
+                panel.style.width = ""; panel.style.maxHeight = "";
+                panel.style.left = "8px"; panel.style.top = "8px";
+            }
+            return;
         }
-        panel.style.width = CONFIG.panelWidth + "px"; panel.style.right = "auto"; panel.style.bottom = "auto";
-        panel.style.maxHeight = (vh - pad * 2) + "px";
+        if (!S.panelMinimized) {
+            panel.style.width = CONFIG.panelWidth + "px";
+            panel.style.maxHeight = (vh - pad * 2) + "px";
+        } else {
+            panel.style.width = "";
+            panel.style.maxHeight = "";
+        }
+        panel.style.right = "auto"; panel.style.bottom = "auto";
         var pw = panel.offsetWidth || CONFIG.panelWidth, ph = panel.offsetHeight || 500;
         var spaceRight = vw - b.right, spaceLeft = b.left, left;
         if (spaceRight >= pw + CONFIG.panelGap + pad) left = b.right + CONFIG.panelGap;
@@ -1042,11 +1072,17 @@ body.s17-nopopup .ol-tooltip {\
     }
 
     /* ========================================================
-       17. OPEN / CLOSE
+       17. OPEN / CLOSE / MINIMIZE
        ======================================================== */
     function openPanel() {
         if (!panel) createPanel();
         S.panelOpen = true;
+        // Start un-minimized each time it's opened
+        S.panelMinimized = false;
+        panel.classList.remove("stage17-minimized");
+        var minBtn = document.getElementById("s17-min");
+        if (minBtn) { minBtn.textContent = "–"; minBtn.title = "Minimize"; }
+
         panel.classList.add("stage17-visible");
         if (button) button.classList.add("stage17-open");
         refreshPanel(); syncPopups();
@@ -1054,11 +1090,27 @@ body.s17-nopopup .ol-tooltip {\
     }
     function closePanel() {
         S.panelOpen = false;
-        if (panel) panel.classList.remove("stage17-visible");
+        S.panelMinimized = false;
+        if (panel) {
+            panel.classList.remove("stage17-visible");
+            panel.classList.remove("stage17-minimized");
+        }
         if (button) button.classList.remove("stage17-open");
         disableSelection(); syncPopups();
     }
     function togglePanel() { S.panelOpen ? closePanel() : openPanel(); }
+
+    function toggleMinimize() {
+        if (!panel || !S.panelOpen) return;
+        S.panelMinimized = !S.panelMinimized;
+        panel.classList.toggle("stage17-minimized", S.panelMinimized);
+        var btn = document.getElementById("s17-min");
+        if (btn) {
+            btn.textContent = S.panelMinimized ? "▢" : "–";
+            btn.title = S.panelMinimized ? "Restore" : "Minimize";
+        }
+        requestAnimationFrame(positionPanel);
+    }
 
     /* ========================================================
        18. BUILD BUTTON
@@ -1079,7 +1131,7 @@ body.s17-nopopup .ol-tooltip {\
     }
 
     /* ========================================================
-       19. BUILD PANEL  ★ LABEL FIELD DROPDOWN ADDED
+       19. BUILD PANEL
        ======================================================== */
     function createPanel() {
         var existing = document.getElementById(CONFIG.panelId);
@@ -1089,7 +1141,13 @@ body.s17-nopopup .ol-tooltip {\
         panel.id = CONFIG.panelId;
 
         panel.innerHTML =
-'<div class="s17-head"><div><div class="s17-t">📤 Advanced Export</div><div class="s17-st">GIS &amp; survey data export</div></div><button type="button" id="s17-close" class="s17-x">×</button></div>' +
+'<div class="s17-head">' +
+  '<div><div class="s17-t">📤 Advanced Export</div><div class="s17-st">GIS &amp; survey data export</div></div>' +
+  '<div class="s17-head-btns">' +
+    '<button type="button" id="s17-min" class="s17-min" title="Minimize">–</button>' +
+    '<button type="button" id="s17-close" class="s17-x" title="Close">×</button>' +
+  '</div>' +
+'</div>' +
 '<div class="s17-body">' +
 
 '<label>Layer</label><select id="s17-layer"></select>' +
@@ -1124,7 +1182,6 @@ body.s17-nopopup .ol-tooltip {\
 '<div class="s17-sec">🎨 Symbology</div>' +
 '<label class="s17-chk"><input type="checkbox" id="s17-style" checked><span>Keep layer styling (colours, stroke width, fill)</span></label>' +
 
-/* ★ LABEL POINTS SECTION — NOW WITH DROPDOWN */
 '<div class="s17-sec">🏷 Label Points</div>' +
 '<label class="s17-chk"><input type="checkbox" id="s17-labels" checked><span>Create centroid label points</span></label>' +
 '<div class="s17-label-group" id="s17-label-group">' +
@@ -1163,6 +1220,7 @@ body.s17-nopopup .ol-tooltip {\
        ======================================================== */
     function bindPanelEvents() {
         document.getElementById("s17-close").onclick = closePanel;
+        document.getElementById("s17-min").onclick = toggleMinimize;
 
         document.getElementById("s17-layer").onchange = function () {
             S.currentLayer = layerById(this.value);
@@ -1200,13 +1258,11 @@ body.s17-nopopup .ol-tooltip {\
 
         document.getElementById("s17-go").onclick = runExport;
 
-        // ★ Label checkbox toggles the group visibility
         document.getElementById("s17-labels").onchange = function () {
             var grp = document.getElementById("s17-label-group");
             if (grp) grp.style.display = this.checked ? "block" : "none";
         };
 
-        // ★ Label field dropdown change handler
         document.getElementById("s17-label-field").onchange = function () {
             var customInput = document.getElementById("s17-label-custom");
             var hint = document.getElementById("s17-label-hint");
@@ -1227,6 +1283,15 @@ body.s17-nopopup .ol-tooltip {\
             }
         };
 
+        // Double-click on header toggles minimize
+        var head = panel.querySelector(".s17-head");
+        if (head) {
+            head.addEventListener("dblclick", function (e) {
+                if (e.target.closest(".s17-head-btns")) return;
+                toggleMinimize();
+            });
+        }
+
         panel.addEventListener("click", function (e) { e.stopPropagation(); });
     }
 
@@ -1245,7 +1310,7 @@ body.s17-nopopup .ol-tooltip {\
     }
 
     /* ========================================================
-       22. UI REFRESH  ★ LABEL FIELD DROPDOWN REFRESH ADDED
+       22. UI REFRESH
        ======================================================== */
     function updateSelectionUI() {
         var info = document.getElementById("s17-selinfo"), btn = document.getElementById("s17-selmode");
@@ -1262,13 +1327,10 @@ body.s17-nopopup .ol-tooltip {\
         var sel = document.getElementById("s17-label-field");
         if (!sel) return;
 
-        // Remember current choice
         var prev = sel.value;
 
-        // Clear everything after the 4 built-in options
         while (sel.options.length > 4) sel.remove(4);
 
-        // Get current layer fields
         if (!S.currentLayer) return;
         var src = S.currentLayer.getSource();
         if (!src) return;
@@ -1288,7 +1350,6 @@ body.s17-nopopup .ol-tooltip {\
             }
         }
 
-        // Sort: preferred fields first
         var preferred = CONFIG.preferredLabelFields.map(function (s) { return s.toLowerCase(); });
         keys.sort(function (a, b) {
             var ai = preferred.indexOf(a.toLowerCase());
@@ -1299,19 +1360,16 @@ body.s17-nopopup .ol-tooltip {\
             return a.localeCompare(b, undefined, { sensitivity: "base" });
         });
 
-        // Add a separator
         var sep = document.createElement("option");
         sep.disabled = true;
         sep.textContent = "── Attribute fields ──";
         sel.appendChild(sep);
 
-        // Add each field as an option
         keys.forEach(function (k) {
             var opt = document.createElement("option");
             opt.value = k;
             opt.textContent = k;
 
-            // Show sample value
             for (var j = 0; j < Math.min(feats.length, 3); j++) {
                 var v = feats[j].get(k);
                 if (v !== undefined && v !== null && v !== "") {
@@ -1325,14 +1383,12 @@ body.s17-nopopup .ol-tooltip {\
             sel.appendChild(opt);
         });
 
-        // Restore previous selection if it still exists
         var found = false;
         for (var oi = 0; oi < sel.options.length; oi++) {
             if (sel.options[oi].value === prev) { sel.value = prev; found = true; break; }
         }
         if (!found) sel.value = "__AUTO__";
 
-        // Trigger change to update hint
         sel.dispatchEvent(new Event("change"));
     }
 
@@ -1364,7 +1420,6 @@ body.s17-nopopup .ol-tooltip {\
         row.appendChild(mkBtn("Select All", true)); row.appendChild(mkBtn("Clear All", false)); box.appendChild(row);
         keys.forEach(function (k) { var lab = document.createElement("label"); lab.className = "s17-field"; var cb = document.createElement("input"); cb.type = "checkbox"; cb.checked = true; cb.dataset.field = k; var sp = document.createElement("span"); sp.textContent = k; lab.appendChild(cb); lab.appendChild(sp); box.appendChild(lab); });
 
-        // ★ Also refresh the label field dropdown
         refreshLabelFieldDropdown();
     }
 
@@ -1411,6 +1466,7 @@ body.s17-nopopup .ol-tooltip {\
        ======================================================== */
     window.Stage17Export = {
         open: openPanel, close: closePanel, toggle: togglePanel,
+        minimize: toggleMinimize,
         enableSelection: enableSelection, disableSelection: disableSelection,
         clearSelection: clearSelection,
         getSelection: function () { return S.selection.slice(); },
@@ -1429,7 +1485,7 @@ body.s17-nopopup .ol-tooltip {\
             if (getMap()) {
                 ensureHighlightLayer(); refreshPanel();
                 setInterval(function () { if (S.panelOpen) updateSelectionUI(); }, 1500);
-                console.log("📤 Stage 17 v5.1 — Advanced Export READY.");
+                console.log("📤 Stage 17 v5.2 — Advanced Export READY (with minimize).");
                 return;
             }
             if (++tries > 50) { console.error("📤 Stage 17: map not found after 30s."); return; }
