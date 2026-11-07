@@ -126,6 +126,34 @@
     #${TOOL_ID} .bn-fields { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px; }
     #${TOOL_ID} .bn-field { min-width:0; }
     #${TOOL_ID} .bn-field-full { grid-column:1 / -1; }
+    #${TOOL_ID} .bn-condition-row {
+        display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr) 38px;
+        gap:7px; align-items:center; margin-bottom:8px;
+    }
+    #${TOOL_ID} .bn-condition-row .bn-select,
+    #${TOOL_ID} .bn-condition-row .bn-input { min-width:0; }
+    #${TOOL_ID} .bn-value-wrap { position:relative; min-width:0; }
+    #${TOOL_ID} .bn-value-suggestions {
+        display:none; position:absolute; top:calc(100% + 3px); left:0; right:0; z-index:30;
+        max-height:220px; overflow-y:auto; background:#fff; border:1px solid #cbd3dd;
+        border-radius:8px; box-shadow:0 5px 16px rgba(0,0,0,.18);
+    }
+    #${TOOL_ID} .bn-value-suggestions.bn-suggestions-open { display:block; }
+    #${TOOL_ID} .bn-value-suggestion {
+        display:block; width:100%; min-height:34px; padding:7px 10px; border:0;
+        border-bottom:1px solid #edf0f3; background:#fff; color:#202124; text-align:left;
+        font:inherit; font-size:12px; cursor:pointer; overflow-wrap:anywhere;
+    }
+    #${TOOL_ID} .bn-value-suggestion:last-child { border-bottom:0; }
+    #${TOOL_ID} .bn-value-suggestion:hover,
+    #${TOOL_ID} .bn-value-suggestion:focus { background:#e8f0fe; outline:none; }
+    #${TOOL_ID} .bn-value-suggestion-empty { padding:8px 10px; color:#687386; font-size:11px; }
+    #${TOOL_ID} .bn-condition-remove {
+        width:38px; min-height:38px; padding:0; background:#fce8e6; color:#a32121;
+        font-size:18px; line-height:1;
+    }
+    #${TOOL_ID} .bn-condition-tools { display:flex; justify-content:flex-start; margin:0 0 10px; }
+    #${TOOL_ID} .bn-add-condition { width:auto; min-height:34px; padding:7px 10px; font-size:12px; }
 
     #${TOOL_ID} .bn-btn {
         width:100%; min-height:41px; border:0; border-radius:8px; padding:10px;
@@ -157,6 +185,10 @@
     #${TOOL_ID} .bn-result-title {
         padding:10px; background:#f3f6fa; border-bottom:1px solid #e0e4e9;
         font-weight:700; font-size:13px;
+    }
+    #${TOOL_ID} .bn-match-title {
+        padding:9px 10px; background:#fafbfc; border-bottom:1px solid #e0e4e9;
+        color:#174ea6; font-size:12px; font-weight:700;
     }
     #${TOOL_ID} .bn-detail {
         display:grid; grid-template-columns:minmax(115px,42%) minmax(0,1fr);
@@ -276,19 +308,11 @@
 
                 <!-- SECTION 1: VIEW CACHED -->
                 <div class="bn-section bn-section-active" data-section="view">
-                    <div class="bn-fields">
-                        <div class="bn-field">
-                            <label class="bn-label" for="bn-v-village">Village Code</label>
-                            <input id="bn-v-village" class="bn-input" type="text"
-                                   inputmode="numeric" autocomplete="off" placeholder="e.g. 1306007">
-                        </div>
-                        <div class="bn-field">
-                            <label class="bn-label" for="bn-v-plot">Parcel / LPM No.</label>
-                            <input id="bn-v-plot" class="bn-input" type="text"
-                                   autocomplete="off" placeholder="e.g. 2272">
-                        </div>
+                    <div class="bn-search-conditions" data-search-conditions></div>
+                    <div class="bn-condition-tools">
+                        <button type="button" class="bn-btn bn-btn-orange bn-add-condition">＋ Add condition</button>
                     </div>
-                    <button type="button" class="bn-btn bn-view-btn">🔎 Fetch from Cache</button>
+                    <button type="button" class="bn-btn bn-view-btn">🔎 Search Cache</button>
                     <div class="bn-status" data-status="view" role="status" aria-live="polite"></div>
 
                     <div class="bn-result" data-result="view">
@@ -504,6 +528,50 @@
         }
         return '';
     }
+    function collectAttributes(source) {
+        var attributes = {};
+        function visit(value, path, depth) {
+            if (value == null || depth > 8) return;
+            if (Array.isArray(value)) {
+                if (value.every(function (item) { return item == null || typeof item !== 'object'; })) {
+                    var joined = value.map(safeValue).filter(Boolean).join(', ');
+                    if (path && joined) attributes[path] = joined;
+                    return;
+                }
+                value.forEach(function (item, index) {
+                    visit(item, path ? path + '[' + index + ']' : String(index), depth + 1);
+                });
+                return;
+            }
+            if (typeof value === 'object') {
+                Object.keys(value).forEach(function (key) {
+                    if (key === '__proto__' || key === 'prototype' || key === 'constructor') return;
+                    var child = value[key];
+                    var childPath = path ? path + '.' + key : key;
+                    if (child && typeof child === 'object' && !Array.isArray(child) &&
+                        (child.value != null || child.name != null)) {
+                        attributes[childPath] = safeValue(child);
+                    }
+                    visit(child, childPath, depth + 1);
+                });
+                return;
+            }
+            if (path) {
+                var text = safeValue(value);
+                if (text) attributes[path] = text;
+            }
+        }
+        visit(source, '', 0);
+        return attributes;
+    }
+    function isDefinedFieldName(name) {
+        var normalized = normalizeKey(name);
+        return FIELD_DEFINITIONS.some(function (field) {
+            return [field.key, field.label].concat(field.aliases).some(function (candidate) {
+                return normalizeKey(candidate) === normalized;
+            });
+        });
+    }
     function parseJsonRecord(json) {
         var record = {}; var source = json;
         if (Array.isArray(source)) source = source.length ? source[0] : {};
@@ -516,11 +584,12 @@
                 }
             });
         }
+        record.attributes = collectAttributes(source);
         FIELD_DEFINITIONS.forEach(function (f) { record[f.key] = findObjectValue(source, f.aliases); });
         return record;
     }
     function parseTextRecord(raw) {
-        var record = {};
+        var record = { attributes:{} };
         var prepared = String(raw == null ? '' : raw)
             .replace(/<\s*br\s*\/?\s*>/gi,'\n')
             .replace(/<\/\s*(?:div|p|tr|li|h[1-6])\s*>/gi,'\n')
@@ -540,11 +609,20 @@
             var fm = aliases.find(function (i) { return normalizeKey(i.alias) === ml; });
             if (fm && val && !record[fm.key]) record[fm.key] = val;
         }
+        text.split(/[\n|;]/).forEach(function (part) {
+            var splitAt = part.indexOf(':');
+            if (splitAt < 1) return;
+            var key = normalizeWhitespace(part.slice(0, splitAt));
+            var value = normalizeWhitespace(part.slice(splitAt + 1));
+            if (!key || !value || isDefinedFieldName(key)) return;
+            record.attributes[key] = value;
+        });
         return record;
     }
     function hasUsefulDetails(r) {
         if (!r) return false;
-        return FIELD_DEFINITIONS.some(function (f) { return Boolean(r[f.key]); });
+        return FIELD_DEFINITIONS.some(function (f) { return Boolean(r[f.key]); }) ||
+            Boolean(r.attributes && Object.keys(r.attributes).length);
     }
     function parseResponse(raw) {
         var text = String(raw == null ? '' : raw).trim();
@@ -568,6 +646,10 @@
             if (/not found|no record|no data|invalid/i.test(clean)) throw new Error(clean.slice(0,300));
             throw new Error('No land details found.');
         }
+        record.attributes = record.attributes || {};
+        Object.keys(record.attributes).forEach(function (key) {
+            record.attributes[key] = safeValue(record.attributes[key]);
+        });
         FIELD_DEFINITIONS.forEach(function (f) { record[f.key] = safeValue(record[f.key]); });
         return record;
     }
@@ -740,57 +822,307 @@
     // SECTION 1 — VIEW CACHED DATA
     // ============================================================
     var viewBtn     = $('.bn-view-btn');
-    var vVillage    = $('#bn-v-village');
-    var vPlot       = $('#bn-v-plot');
+    var conditionList = $('[data-search-conditions]');
+    var addConditionBtn = $('.bn-add-condition');
     var viewResult  = $('[data-result="view"]');
+    var viewTitle   = $('.bn-result-title', viewResult);
     var viewDetails = $('.bn-details', viewResult);
     var copyBtn     = $('.bn-copy-btn');
     var currentCopyText = '';
+    var searchFields = [];
+    var searchRecords = null;
+    var searchValuesByField = Object.create(null);
 
-    function renderDetails(record) {
-        viewDetails.replaceChildren();
-        FIELD_DEFINITIONS.forEach(function (f) {
-            var row = document.createElement('div'); row.className = 'bn-detail';
-            var l = document.createElement('div'); l.className = 'bn-detail-label'; l.textContent = f.label;
-            var v = document.createElement('div'); v.className = 'bn-detail-value'; v.textContent = record[f.key] || 'Not available';
-            row.appendChild(l); row.appendChild(v);
-            viewDetails.appendChild(row);
+    async function refreshSearchFields(records) {
+        var fields = FIELD_DEFINITIONS.map(function (field) {
+            return { key:field.key, label:field.label };
         });
-        currentCopyText = FIELD_DEFINITIONS.map(function (f) {
-            return f.label + ': ' + (record[f.key] || 'Not available');
-        }).join('\n');
+        var known = new Set(fields.map(function (field) { return normalizeKey(field.key); }));
+        try {
+            records = records || await dbGetAll();
+            searchRecords = records;
+            searchValuesByField = Object.create(null);
+            records.forEach(function (record) {
+                Object.keys(getRecordAttributes(record)).forEach(function (key) {
+                    var normalized = normalizeKey(key);
+                    if (!key || isDefinedFieldName(key) || known.has(normalized)) return;
+                    known.add(normalized);
+                    fields.push({ key:key, label:key });
+                });
+            });
+        } catch (e) { /* Standard fields remain available if the cache cannot be read. */ }
+        searchFields = fields;
+        conditionList.querySelectorAll('.bn-condition-field').forEach(function (select) {
+            var selected = select.value;
+            select.replaceChildren();
+            searchFields.forEach(function (field) {
+                var option = document.createElement('option');
+                option.value = field.key;
+                option.textContent = field.label;
+                select.appendChild(option);
+            });
+            select.value = fields.some(function (field) { return field.key === selected; }) ? selected : 'lpmNo';
+        });
+        conditionList.querySelectorAll('.bn-condition-row').forEach(function (row) {
+            refreshValueSuggestions(row, row.querySelector('.bn-condition-value').value,
+                document.activeElement === row.querySelector('.bn-condition-value'));
+        });
+        return records || [];
+    }
+
+    function getSearchFieldValue(record, fieldKey) {
+        var definition = FIELD_DEFINITIONS.find(function (field) { return field.key === fieldKey; });
+        if (definition) return safeValue(record[definition.key]);
+        return safeValue(getRecordAttributes(record)[fieldKey]);
+    }
+
+    function getSearchFieldValues(fieldKey) {
+        if (searchValuesByField[fieldKey]) return searchValuesByField[fieldKey];
+        var unique = new Map();
+        (searchRecords || []).forEach(function (record) {
+            var value = getSearchFieldValue(record, fieldKey);
+            if (!value) return;
+            var normalized = normalizeWhitespace(value).toLocaleLowerCase();
+            if (!unique.has(normalized)) unique.set(normalized, value);
+        });
+        searchValuesByField[fieldKey] = Array.from(unique.values()).sort(function (a, b) {
+            return a.localeCompare(b, undefined, { numeric:true, sensitivity:'base' });
+        });
+        return searchValuesByField[fieldKey];
+    }
+
+    function refreshValueSuggestions(row, query, open) {
+        if (!row || !searchRecords) return;
+        var field = row.querySelector('.bn-condition-field');
+        var input = row.querySelector('.bn-condition-value');
+        var menu = row.querySelector('.bn-value-suggestions');
+        var normalizedQuery = normalizeWhitespace(query).toLocaleLowerCase();
+        var values = getSearchFieldValues(field.value).filter(function (value) {
+            return !normalizedQuery || normalizeWhitespace(value).toLocaleLowerCase().indexOf(normalizedQuery) !== -1;
+        });
+        menu.replaceChildren();
+        if (!values.length) {
+            var empty = document.createElement('div');
+            empty.className = 'bn-value-suggestion-empty';
+            empty.textContent = normalizedQuery ? 'No matching cached values' : 'No cached values for this attribute';
+            menu.appendChild(empty);
+        } else {
+            values.forEach(function (value) {
+                var option = document.createElement('button');
+                option.type = 'button';
+                option.className = 'bn-value-suggestion';
+                option.textContent = value;
+                option.addEventListener('mousedown', function (event) { event.preventDefault(); });
+                option.addEventListener('click', function () {
+                    input.value = value;
+                    menu.classList.remove('bn-suggestions-open');
+                    input.focus();
+                });
+                menu.appendChild(option);
+            });
+        }
+        menu.classList.toggle('bn-suggestions-open', !!open);
+    }
+
+    function addConditionRow(fieldKey) {
+        var row = document.createElement('div');
+        row.className = 'bn-condition-row';
+
+        var field = document.createElement('select');
+        field.className = 'bn-select bn-condition-field';
+        field.setAttribute('aria-label', 'Attribute to search');
+        searchFields.forEach(function (item) {
+            var option = document.createElement('option');
+            option.value = item.key;
+            option.textContent = item.label;
+            field.appendChild(option);
+        });
+        field.value = searchFields.some(function (item) { return item.key === fieldKey; }) ? fieldKey : 'lpmNo';
+        field.addEventListener('change', function () { refreshValueSuggestions(row, value.value, true); });
+
+        var valueWrap = document.createElement('div');
+        valueWrap.className = 'bn-value-wrap';
+        var value = document.createElement('input');
+        value.type = 'text';
+        value.className = 'bn-input bn-condition-value';
+        value.autocomplete = 'off';
+        value.placeholder = 'Search value';
+        value.setAttribute('aria-label', 'Value to search');
+        var menu = document.createElement('div');
+        menu.className = 'bn-value-suggestions';
+        menu.setAttribute('role', 'listbox');
+        value.addEventListener('focus', async function () {
+            if (!searchRecords) await refreshSearchFields();
+            refreshValueSuggestions(row, value.value, true);
+        });
+        value.addEventListener('input', function () {
+            refreshValueSuggestions(row, value.value, true);
+        });
+        value.addEventListener('blur', function () {
+            setTimeout(function () { menu.classList.remove('bn-suggestions-open'); }, 120);
+        });
+        value.addEventListener('keydown', function (event) {
+            if (event.key === 'Enter') { event.preventDefault(); viewBtn.click(); }
+            if (event.key === 'Escape') menu.classList.remove('bn-suggestions-open');
+        });
+        valueWrap.append(value, menu);
+
+        var remove = document.createElement('button');
+        remove.type = 'button';
+        remove.className = 'bn-btn bn-condition-remove';
+        remove.textContent = '×';
+        remove.title = 'Remove condition';
+        remove.setAttribute('aria-label', 'Remove search condition');
+        remove.addEventListener('click', function () {
+            if (conditionList.children.length > 1) row.remove();
+            else value.value = '';
+        });
+
+        row.append(field, valueWrap, remove);
+        conditionList.appendChild(row);
+        if (searchRecords) refreshValueSuggestions(row, '', false);
+        return row;
+    }
+
+    function readSearchConditions() {
+        return Array.from(conditionList.querySelectorAll('.bn-condition-row'))
+            .map(function (row) {
+                return {
+                    field: row.querySelector('.bn-condition-field').value,
+                    value: normalizeWhitespace(row.querySelector('.bn-condition-value').value)
+                };
+            })
+            .filter(function (condition) { return condition.field && condition.value; });
+    }
+
+    function getRecordAttributes(record) {
+        var attributes = Object.assign({}, record.attributes || {});
+        Object.keys(record).forEach(function (key) {
+            if (key === 'attributes' || key === 'id' || key === 'cachedAt' || isDefinedFieldName(key)) return;
+            var value = safeValue(record[key]);
+            if (value) attributes[key] = value;
+        });
+        return attributes;
+    }
+
+    function matchesAllAttributes(record, query, selectedField) {
+        var normalizedQuery = normalizeWhitespace(query).toLocaleLowerCase();
+        if (!normalizedQuery) return false;
+        if (selectedField && selectedField !== '*') {
+            var definition = FIELD_DEFINITIONS.find(function (field) { return field.key === selectedField; });
+            var attributes = getRecordAttributes(record);
+            var selectedValue = definition ? record[definition.key] : attributes[selectedField];
+            var normalizedValue = normalizeWhitespace(safeValue(selectedValue)).toLocaleLowerCase();
+            if (selectedField === 'lpmNo') return normalizedValue === normalizedQuery;
+            return normalizedValue.indexOf(normalizedQuery) !== -1;
+        }
+        var searchable = [];
+        var attributes = getRecordAttributes(record);
+        FIELD_DEFINITIONS.forEach(function (field) {
+            var value = safeValue(record[field.key]);
+            if (value) searchable.push(field.label + ' ' + value);
+        });
+        Object.keys(attributes).forEach(function (key) {
+            searchable.push(key + ' ' + safeValue(attributes[key]));
+        });
+        return searchable.some(function (value) {
+            return normalizeWhitespace(value).toLocaleLowerCase().indexOf(normalizedQuery) !== -1;
+        });
+    }
+
+    function renderDetails(records) {
+        if (!Array.isArray(records)) records = [records];
+        viewDetails.replaceChildren();
+        viewTitle.textContent = records.length > 1 ? 'Search Results (' + records.length + ')' : 'Land Details';
+        var copyLines = [];
+        records.forEach(function (record, index) {
+            if (records.length > 1) {
+                var heading = document.createElement('div');
+                heading.className = 'bn-match-title';
+                heading.textContent = (index + 1) + '. ' + (record.lpmNo ? 'LPM No.: ' + record.lpmNo : 'Cached parcel');
+                viewDetails.appendChild(heading);
+            }
+            FIELD_DEFINITIONS.forEach(function (f) {
+                var value = safeValue(record[f.key]) || 'Not available';
+                var row = document.createElement('div'); row.className = 'bn-detail';
+                var l = document.createElement('div'); l.className = 'bn-detail-label'; l.textContent = f.label;
+                var v = document.createElement('div'); v.className = 'bn-detail-value'; v.textContent = value;
+                row.appendChild(l); row.appendChild(v);
+                viewDetails.appendChild(row);
+                copyLines.push(f.label + ': ' + value);
+            });
+            var attributes = getRecordAttributes(record);
+            Object.keys(attributes).forEach(function (key) {
+                if (isDefinedFieldName(key)) return;
+                var value = safeValue(attributes[key]);
+                if (!value) return;
+                var row = document.createElement('div'); row.className = 'bn-detail';
+                var l = document.createElement('div'); l.className = 'bn-detail-label'; l.textContent = key;
+                var v = document.createElement('div'); v.className = 'bn-detail-value'; v.textContent = value;
+                row.appendChild(l); row.appendChild(v);
+                viewDetails.appendChild(row);
+                copyLines.push(key + ': ' + value);
+            });
+        });
+        currentCopyText = copyLines.join('\n');
         viewResult.classList.add('bn-result-visible');
     }
+
+    addConditionBtn.addEventListener('click', function () {
+        addConditionRow(searchFields[0] ? searchFields[0].key : 'lpmNo');
+    });
 
     viewBtn.addEventListener('click', async function () {
         clearStatus('view');
         viewResult.classList.remove('bn-result-visible');
-        var v = normalizeWhitespace(vVillage.value);
-        var p = normalizeWhitespace(vPlot.value);
-        if (!v || !p) { setStatus('view','Enter Village Code and Parcel Number.','error'); return; }
+        var conditions = readSearchConditions();
+        if (!conditions.length) { setStatus('view','Add an attribute and value for at least one search condition.','error'); return; }
         try {
-            var rec = await dbGet(makeId(v, p));
-            if (!rec) { setStatus('view','No cached record for ' + v + ' / ' + p + '. Use Cache tab to fetch.','error'); return; }
-            renderDetails(rec);
-            setStatus('view','Loaded from cache (saved ' + new Date(rec.cachedAt).toLocaleString() + ').','success');
+            var records = await dbGetAll();
+            await refreshSearchFields(records);
+            var matches = records.filter(function (record) {
+                return conditions.every(function (condition) {
+                    return matchesAllAttributes(record, condition.value, condition.field);
+                });
+            });
+            if (!matches.length) {
+                setStatus('view','No cached records matched all ' + conditions.length + ' condition(s).','error');
+                return;
+            }
+            renderDetails(matches);
+            setStatus('view','Found ' + matches.length + ' cached record(s) matching all ' + conditions.length + ' condition(s).','success');
         } catch (e) { setStatus('view','Error: ' + (e.message || e),'error'); }
     });
 
-    [vVillage, vPlot].forEach(function (i) {
-        i.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); viewBtn.click(); } });
-    });
+    addConditionRow('lpmNo');
+    refreshSearchFields();
 
     async function copyText(text) {
-        if (navigator.clipboard && window.isSecureContext) { await navigator.clipboard.writeText(text); return; }
+        if (!text) throw new Error('There are no details to copy.');
+        if (navigator.clipboard && window.isSecureContext) {
+            try {
+                await navigator.clipboard.writeText(text);
+                return;
+            } catch (e) { /* Fall back when clipboard permission is unavailable. */ }
+        }
         var ta = document.createElement('textarea');
-        ta.value = text; ta.setAttribute('readonly',''); ta.style.cssText='position:fixed;opacity:0';
+        ta.value = text;
+        ta.setAttribute('readonly','');
+        ta.setAttribute('aria-hidden','true');
+        ta.style.cssText = 'position:fixed;left:0;top:0;width:1px;height:1px;padding:0;border:0;opacity:.01;z-index:-1';
         document.body.appendChild(ta); ta.select();
-        try { if (!document.execCommand('copy')) throw new Error(); } finally { ta.remove(); }
+        ta.focus();
+        ta.select();
+        ta.setSelectionRange(0, ta.value.length);
+        var copied = false;
+        try { copied = document.execCommand('copy'); }
+        finally { ta.remove(); }
+        if (!copied) throw new Error('Clipboard access was denied by the browser.');
     }
     copyBtn.addEventListener('click', async function () {
-        if (!currentCopyText) return;
-        try { await copyText(currentCopyText); setStatus('view','Copied to clipboard.','success'); }
-        catch (e) { setStatus('view','Could not copy. Select and copy manually.','error'); }
+        if (!currentCopyText) { setStatus('view','Search for records before copying details.','error'); return; }
+        try { await copyText(currentCopyText); setStatus('view','Copied details to clipboard.','success'); }
+        catch (e) { setStatus('view',e.message || 'Could not copy details.','error'); }
     });
 
     // ============================================================
@@ -1145,6 +1477,11 @@
     function toCSV(rows) {
         var cols = ['id','cachedAt'];
         FIELD_DEFINITIONS.forEach(function (f) { if (cols.indexOf(f.key) === -1) cols.push(f.key); });
+        rows.forEach(function (record) {
+            Object.keys(record.attributes || {}).forEach(function (key) {
+                if (key !== 'id' && key !== 'cachedAt' && !isDefinedFieldName(key) && cols.indexOf(key) === -1) cols.push(key);
+            });
+        });
 
         var esc = function (s) {
             if (s == null) return '';
@@ -1166,7 +1503,10 @@
         lines.push(cols.map(esc).join(','));
 
         rows.forEach(function (r) {
-            lines.push(cols.map(function (c) { return esc(r[c]); }).join(','));
+            lines.push(cols.map(function (c) {
+                var value = r[c] !== undefined ? r[c] : (r.attributes || {})[c];
+                return esc(value);
+            }).join(','));
         });
         return lines.join('\r\n');
     }
@@ -1300,8 +1640,21 @@
                 var r = rows[i] || {};
                 var rec = {};
                 FIELD_DEFINITIONS.forEach(function (f) {
-                    if (r[f.key] != null && r[f.key] !== '') rec[f.key] = String(r[f.key]);
+                    var value = r[f.key] != null && r[f.key] !== '' ? r[f.key] : findObjectValue(r, f.aliases);
+                    if (value != null && value !== '') rec[f.key] = String(value);
                 });
+                var attributes = Object.assign({}, r.attributes && typeof r.attributes === 'object' ? r.attributes : {});
+                Object.keys(r).forEach(function (key) {
+                    if (key === 'id' || key === 'cachedAt' || key === 'attributes' || isDefinedFieldName(key)) return;
+                    var value = r[key];
+                    if (value == null || value === '') return;
+                    if (typeof value === 'object') {
+                        Object.assign(attributes, collectAttributes({ [key]:value }));
+                    } else {
+                        attributes[key] = safeValue(value);
+                    }
+                });
+                if (Object.keys(attributes).length) rec.attributes = attributes;
                 var village = r.villageCode || rec.villageCode || '';
                 var plot = r.lpmNo || rec.lpmNo || '';
                 if (!village || !plot) { skipped++; continue; }
