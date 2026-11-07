@@ -3247,7 +3247,7 @@ function installStyles() {
             });
 
         });
-        renderResults(currentResults, layer);
+        renderResults(currentResults, layer, conditions);
 
 
 
@@ -3344,7 +3344,20 @@ function installStyles() {
 
 
 
-    function getTitleForFeature(feature) {
+    function getTitleForFeature(feature, conditions) {
+
+        const properties = feature.getProperties();
+
+        const searchedField = (conditions || []).find(function (condition) {
+            const value = properties[condition.field];
+            return value !== undefined && value !== null &&
+                String(value).trim() !== "";
+        });
+
+        if (searchedField) {
+            return searchedField.field + ": " +
+                valueToString(properties[searchedField.field]);
+        }
 
         const preferred = findProperty(
 
@@ -3357,10 +3370,6 @@ function installStyles() {
 
 
         if (preferred) return preferred.value;
-
-
-
-        const properties = feature.getProperties();
 
 
 
@@ -3404,11 +3413,21 @@ function installStyles() {
 
 
 
-    function getDetailFields(feature) {
+    function getDetailFields(feature, conditions) {
 
         const properties = feature.getProperties();
 
         const output = [];
+
+        (conditions || []).forEach(function (condition) {
+            if (output.length >= CONFIG.maxDetails) return;
+            const field = condition.field;
+            const value = properties[field];
+            if (value === undefined || value === null ||
+                String(value).trim() === "") return;
+            if (output.some(function (item) { return item.key === field; })) return;
+            output.push({ key: field, value: valueToString(value) });
+        });
 
 
 
@@ -3528,7 +3547,7 @@ function installStyles() {
 
 
 
-    function renderResults(features, layer) {
+    function renderResults(features, layer, conditions) {
 
         resultCount.textContent = String(features.length);
 
@@ -3564,17 +3583,17 @@ function installStyles() {
 
                 "aria-label",
 
-                "Zoom to " + getTitleForFeature(feature)
+                "Zoom to " + getTitleForFeature(feature, conditions)
 
             );
 
 
 
-            const title = getTitleForFeature(feature);
+            const title = getTitleForFeature(feature, conditions);
 
             const owner = getOwnerForFeature(feature);
 
-            const details = getDetailFields(feature);
+            const details = getDetailFields(feature, conditions);
 
 
 
