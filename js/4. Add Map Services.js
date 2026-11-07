@@ -1,11 +1,20 @@
 // ============================================================
-// 🌐 STAGE 16 — EXTERNAL BASE MAP SERVICES (v4.2)
+// 🌐 STAGE 16 — EXTERNAL MAP SERVICES (v4.6)
 // QGIS2WEB + OPENLAYERS
 //
-// WMS + WMTS + XYZ
+// WMS + WMTS + XYZ + MBTiles + GeoTIFF
 //
-// v4.2 CHANGELOG
+// v4.6 CHANGELOG
 // ------------------------------------------------------------
+//  ✔ Restored OpenLayers' native GeoTIFF normalization for consistent imagery
+//  ✔ Combine embedded alpha and NoData masks to keep raster backgrounds transparent
+//  ✔ Robust sample-based GeoTIFF contrast stretch for rasters without statistics
+//  ✔ Remove-all action clears external layers without a blocking browser prompt
+//  ✔ Manual GeoTIFF source CRS override with EPSG lookup
+//  ✔ Validate raster extents before changing the map view
+//  ✔ Local MBTiles and GeoTIFF raster import with IndexedDB persistence
+//  ✔ GeoTIFF UTM projection support and band-aware raster rendering
+//  ✔ Raster layer restore, opacity control, removal, and extent fitting
 //  ✔ Mobile Width Constraint — panel NEVER stretches full width
 //  ✔ Auto-Centering Card — floats centered on mobile (max 320px)
 //  ✔ Dynamic Max-Height Engine — panel always fits the screen
@@ -15,7 +24,7 @@
 //  ✔ Style Property Overrides — setProperty(..., 'important')
 //  ✔ Fully draggable + hideable by MapToolManager on mobile too
 //  ✔ Panel auto-follows the button wherever you drag it
-//  ✔ Full persistence: WMS + WMTS + XYZ are all restored
+//  ✔ Full persistence: services and locally imported rasters are restored
 //  ✔ ESC to close, click-outside to close
 //  ✔ Closes automatically when Tool Manager enters edit mode
 //
@@ -23,7 +32,7 @@
 // ------------------------------------------------------------
 //        TOP
 //         ├── Vector / Parcel / Labels / Measurements
-//         ├── ⭐ STAGE 16 EXTERNAL MAP (WMS / WMTS / XYZ)
+//         ├── ⭐ STAGE 16 EXTERNAL MAP (WMS / WMTS / XYZ / RASTER)
 //         └── Existing QGIS2Web BASE MAP
 //        BOTTOM
 // ============================================================
@@ -82,6 +91,642 @@
     if (typeof ol === "undefined") {
         console.error("🌐 Stage 16: OpenLayers (ol) not found.");
         return;
+    }
+
+    // =========================================================
+    // LOCAL RASTER FILES
+    // =========================================================
+    var rasterDatabasePromise = null;
+    var sqlJsPromise = null;
+
+    function openRasterDatabase() {
+        if (!window.indexedDB) {
+            return Promise.reject(new Error("This browser does not support IndexedDB."));
+        }
+
+        if (rasterDatabasePromise) {
+            return rasterDatabasePromise;
+        }
+
+        rasterDatabasePromise = new Promise(function (resolve, reject) {
+            var request = window.indexedDB.open("stage16RasterFiles", 1);
+
+            request.onupgradeneeded = function () {
+                var database = request.result;
+                if (!database.objectStoreNames.contains("files")) {
+                    database.createObjectStore("files");
+                }
+            };
+
+            request.onsuccess = function () {
+                resolve(request.result);
+            };
+
+            request.onerror = function () {
+                reject(request.error || new Error("Could not open raster-file storage."));
+            };
+        });
+
+        return rasterDatabasePromise;
+    }
+
+    function storeRasterFile(id, file) {
+        return openRasterDatabase().then(function (database) {
+            return new Promise(function (resolve, reject) {
+                var transaction = database.transaction(["files"], "readwrite");
+                transaction.objectStore("files").put(file, id);
+                transaction.oncomplete = resolve;
+                transaction.onerror = function () {
+                    reject(transaction.error || new Error("Could not save the raster file."));
+                };
+                transaction.onabort = function () {
+                    reject(transaction.error || new Error("Raster-file storage was aborted."));
+                };
+            });
+        });
+    }
+
+    function loadRasterFile(id) {
+        return openRasterDatabase().then(function (database) {
+            return new Promise(function (resolve, reject) {
+                var request = database.transaction(["files"], "readonly")
+                    .objectStore("files").get(id);
+                request.onsuccess = function () {
+                    if (!request.result) {
+                        reject(new Error("The stored raster file is missing. Import it again."));
+                        return;
+                    }
+                    resolve(request.result);
+                };
+                request.onerror = function () {
+                    reject(request.error || new Error("Could not read the stored raster file."));
+                };
+            });
+        });
+    }
+
+    function deleteRasterFile(id) {
+        return openRasterDatabase().then(function (database) {
+            return new Promise(function (resolve, reject) {
+                var transaction = database.transaction(["files"], "readwrite");
+                transaction.objectStore("files").delete(id);
+                transaction.oncomplete = resolve;
+                transaction.onerror = function () {
+                    reject(transaction.error || new Error("Could not delete the stored raster file."));
+                };
+            });
+        });
+    }
+
+    function loadSqlJs() {
+        if (window.initSqlJs) {
+            return Promise.resolve(window.initSqlJs);
+        }
+
+        if (sqlJsPromise) {
+            return sqlJsPromise;
+        }
+
+        sqlJsPromise = new Promise(function (resolve, reject) {
+            var script = document.createElement("script");
+            script.src = "https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.13.0/sql-wasm.js";
+            script.onload = function () {
+                if (!window.initSqlJs) {
+                    reject(new Error("The MBTiles database reader did not initialize."));
+                    return;
+                }
+                resolve(window.initSqlJs);
+            };
+            script.onerror = function () {
+                reject(new Error("Could not load the MBTiles database reader. Check your internet connection."));
+            };
+            document.head.appendChild(script);
+        }).then(function (initSqlJs) {
+            return initSqlJs({
+                locateFile: function (file) {
+                    return "https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.13.0/" + file;
+                }
+            });
+        });
+
+        return sqlJsPromise;
+    }
+
+    function getMbtilesMetadata(database) {
+        var metadata = {};
+        var tables = database.exec(
+            "SELECT name FROM sqlite_master WHERE type = 'table'"
+        );
+        var tableNames = tables.length ? tables[0].values.map(function (row) {
+            return row[0];
+        }) : [];
+
+        if (tableNames.indexOf("metadata") >= 0) {
+            var rows = database.exec("SELECT name, value FROM metadata");
+            if (rows.length) {
+                rows[0].values.forEach(function (row) {
+                    metadata[String(row[0]).toLowerCase()] = String(row[1]);
+                });
+            }
+        }
+
+        if (tableNames.indexOf("tiles") < 0 &&
+            !(tableNames.indexOf("map") >= 0 && tableNames.indexOf("images") >= 0)) {
+            throw new Error("This MBTiles file has no recognized raster tile tables.");
+        }
+
+        return { metadata: metadata, tables: tableNames };
+    }
+
+    function createMbtilesLayer(blob) {
+        return loadSqlJs().then(function (initSqlJs) {
+            return blob.arrayBuffer().then(function (buffer) {
+                var database = new initSqlJs.Database(new Uint8Array(buffer));
+                var info;
+
+                try {
+                    info = getMbtilesMetadata(database);
+                } catch (error) {
+                    database.close();
+                    throw error;
+                }
+
+                var metadata = info.metadata;
+                var format = String(metadata.format || "png").toLowerCase();
+                var mimeTypes = {
+                    png: "image/png",
+                    jpg: "image/jpeg",
+                    jpeg: "image/jpeg",
+                    webp: "image/webp"
+                };
+
+                if (!mimeTypes[format]) {
+                    database.close();
+                    if (format === "pbf" || format === "mvt") {
+                        throw new Error("Vector-tile MBTiles are not supported; use raster MBTiles.");
+                    }
+                    throw new Error("Unsupported MBTiles raster format: " + format);
+                }
+
+                var directQuery = null;
+                var normalizedQuery = null;
+                try {
+                    if (info.tables.indexOf("tiles") >= 0) {
+                        directQuery = database.prepare(
+                            "SELECT tile_data FROM tiles WHERE zoom_level = ? " +
+                            "AND tile_column = ? AND tile_row = ? LIMIT 1"
+                        );
+                    } else {
+                        normalizedQuery = database.prepare(
+                            "SELECT images.tile_data FROM map " +
+                            "JOIN images ON map.tile_id = images.tile_id " +
+                            "WHERE map.zoom_level = ? AND map.tile_column = ? " +
+                            "AND map.tile_row = ? LIMIT 1"
+                        );
+                    }
+                } catch (error) {
+                    database.close();
+                    throw new Error("Could not read the MBTiles tile tables: " + error.message);
+                }
+
+                var objectUrls = {};
+                var urlCache = {};
+                var scheme = String(metadata.scheme || "tms").toLowerCase();
+                var maxZoom = Number(metadata.maxzoom);
+                var minZoom = Number(metadata.minzoom);
+                var sourceOptions = {
+                    projection: "EPSG:3857",
+                    wrapX: false,
+                    tileUrlFunction: function (tileCoord) {
+                        if (!tileCoord) {
+                            return undefined;
+                        }
+
+                        var z = tileCoord[0];
+                        var x = tileCoord[1];
+                        var y = -tileCoord[2] - 1;
+                        var tileCount = Math.pow(2, z);
+
+                        if (x < 0 || y < 0 || x >= tileCount || y >= tileCount) {
+                            return undefined;
+                        }
+
+                        var row = scheme === "xyz" ? y : tileCount - 1 - y;
+                        var key = z + "/" + x + "/" + row;
+                        if (urlCache[key]) {
+                            var cachedUrl = urlCache[key];
+                            delete urlCache[key];
+                            urlCache[key] = cachedUrl;
+                            return urlCache[key];
+                        }
+
+                        var statement = directQuery || normalizedQuery;
+                        statement.bind([z, x, row]);
+                        var found = statement.step();
+                        var tile = found ? statement.getAsObject().tile_data : null;
+                        statement.reset();
+
+                        if (!tile) {
+                            return undefined;
+                        }
+
+                        var tileBytes = tile instanceof Uint8Array ? tile : new Uint8Array(tile);
+                        var url = URL.createObjectURL(new Blob([tileBytes], {
+                            type: mimeTypes[format]
+                        }));
+                        urlCache[key] = url;
+                        objectUrls[key] = url;
+
+                        var cachedKeys = Object.keys(urlCache);
+                        if (cachedKeys.length > 512) {
+                            var oldestKey = cachedKeys[0];
+                            URL.revokeObjectURL(urlCache[oldestKey]);
+                            delete urlCache[oldestKey];
+                            delete objectUrls[oldestKey];
+                        }
+
+                        return url;
+                    }
+                };
+
+                if (Number.isFinite(maxZoom)) {
+                    sourceOptions.maxZoom = maxZoom;
+                }
+                if (Number.isFinite(minZoom)) {
+                    sourceOptions.minZoom = minZoom;
+                }
+
+                var source = new ol.source.XYZ(sourceOptions);
+                var layer = new ol.layer.Tile({
+                    source: source,
+                    visible: true,
+                    opacity: CONFIG.defaultOpacity,
+                    properties: {
+                        stage16External: true,
+                        stage16ExternalType: "MBTiles",
+                        stage16ExternalBaseMap: true,
+                        title: metadata.name || "MBTiles"
+                    }
+                });
+
+                var extent = null;
+                if (metadata.bounds) {
+                    var bounds = metadata.bounds.split(",").map(Number);
+                    if (bounds.length === 4 && bounds.every(Number.isFinite)) {
+                        extent = ol.proj.transformExtent(
+                            bounds, "EPSG:4326", "EPSG:3857"
+                        );
+                    }
+                }
+
+                return {
+                    layer: layer,
+                    extent: extent,
+                    projection: "EPSG:3857",
+                    cleanup: function () {
+                        Object.keys(objectUrls).forEach(function (key) {
+                            URL.revokeObjectURL(objectUrls[key]);
+                        });
+                        if (directQuery) {
+                            directQuery.free();
+                        }
+                        if (normalizedQuery) {
+                            normalizedQuery.free();
+                        }
+                        database.close();
+                    }
+                };
+            });
+        });
+    }
+
+    function createGeoTiffLayer(blob, title, crsOverride) {
+        if (!ol.source.GeoTIFF || !ol.layer.WebGLTile) {
+            return Promise.reject(new Error("GeoTIFF is not available in this OpenLayers build."));
+        }
+
+        if (!window.GeoTIFF || typeof window.GeoTIFF.fromBlob !== "function") {
+            return Promise.reject(new Error("The GeoTIFF decoder is not loaded. Reload the page and try again."));
+        }
+
+        var proj4lib = window.proj4;
+        if (!proj4lib || !ol.proj.proj4 || !ol.proj.proj4.register) {
+            return Promise.reject(new Error("Projection support is not loaded. Reload the page and try again."));
+        }
+
+        for (var zone = 1; zone <= 60; zone += 1) {
+            proj4lib.defs("EPSG:" + (32600 + zone),
+                "+proj=utm +zone=" + zone + " +datum=WGS84 +units=m +no_defs +type=crs");
+            proj4lib.defs("EPSG:" + (32700 + zone),
+                "+proj=utm +zone=" + zone + " +south +datum=WGS84 +units=m +no_defs +type=crs");
+        }
+        ol.proj.proj4.register(proj4lib);
+
+        return resolveRasterProjection(crsOverride).then(function (projectionOverride) {
+            return window.GeoTIFF.fromBlob(blob).then(function (tiff) {
+                return tiff.getImage().then(function (image) {
+                    var bandCount = image.getSamplesPerPixel();
+                    if (!bandCount) {
+                        throw new Error("The GeoTIFF contains no raster bands.");
+                    }
+
+                    var noDataValue = image.getGDALNoData();
+                    var hasNoData = noDataValue !== null && noDataValue !== undefined;
+                    if (typeof noDataValue === "string") {
+                        hasNoData = noDataValue.trim() !== "";
+                        if (hasNoData) {
+                            noDataValue = Number(noDataValue);
+                        }
+                    }
+                    var extraSamples = image.getFileDirectory().ExtraSamples || [];
+                    var hasAlpha = extraSamples.some(function (sampleType) {
+                        return Number(sampleType) === 1 || Number(sampleType) === 2;
+                    });
+                    var alphaExpressions = [];
+                    if (hasAlpha) {
+                        alphaExpressions.push(["band", bandCount]);
+                    }
+                    if (hasNoData) {
+                        alphaExpressions.push(["band", bandCount + 1]);
+                    }
+                    var alphaExpression = alphaExpressions.length ?
+                        alphaExpressions.reduce(function (combined, expression) {
+                            return combined ?
+                                ["*", combined, expression] : expression;
+                        }, null) : 1;
+                    var greenBand = bandCount >= 3 ? 2 : 1;
+                    var blueBand = bandCount >= 3 ? 3 : 1;
+                    var color = ["array",
+                        ["band", 1],
+                        ["band", greenBand],
+                        ["band", blueBand],
+                        alphaExpression
+                    ];
+                    var geoTiffOptions = {
+                        sources: [{ blob: blob }],
+                        convertToRGB: "auto",
+                        normalize: true
+                    };
+                    if (projectionOverride) {
+                        geoTiffOptions.projection = projectionOverride;
+                    }
+
+                    var source = new ol.source.GeoTIFF(geoTiffOptions);
+                    var layer = new ol.layer.WebGLTile({
+                        source: source,
+                        style: { color: color },
+                        visible: true,
+                        opacity: CONFIG.defaultOpacity,
+                        properties: {
+                            stage16External: true,
+                            stage16ExternalType: "GeoTIFF",
+                            stage16ExternalBaseMap: true,
+                            title: title
+                        }
+                    });
+
+                    return source.getView().then(function (viewOptions) {
+                                var rasterProjection = viewOptions.projection;
+                                var rasterExtent = viewOptions.extent;
+                                var mapProjection = mapRef.getView().getProjection();
+                                var rasterCode = rasterProjection && rasterProjection.getCode ?
+                                    rasterProjection.getCode() : String(rasterProjection || "");
+                                var mapCode = mapProjection.getCode();
+
+                                if (!rasterProjection || !rasterExtent ||
+                                    !rasterExtent.every(Number.isFinite) ||
+                                    rasterExtent[0] >= rasterExtent[2] ||
+                                    rasterExtent[1] >= rasterExtent[3]) {
+                                    throw new Error(
+                                        "Could not read a valid extent and CRS from this GeoTIFF. " +
+                                        "Choose its source CRS manually and import it again."
+                                    );
+                                }
+
+                                if (rasterCode !== mapCode) {
+                                    var center = ol.extent.getCenter(rasterExtent);
+                                    var transformedCenter = ol.proj.transform(
+                                        center, rasterProjection, mapProjection
+                                    );
+                                    var transformedProbe = ol.proj.transform(
+                                        [center[0] + 1, center[1] + 1],
+                                        rasterProjection,
+                                        mapProjection
+                                    );
+
+                                    if (!transformedCenter.every(Number.isFinite) ||
+                                        !transformedProbe.every(Number.isFinite) ||
+                                        (transformedCenter[0] === center[0] &&
+                                         transformedCenter[1] === center[1] &&
+                                         transformedProbe[0] === center[0] + 1 &&
+                                         transformedProbe[1] === center[1] + 1)) {
+                                        throw new Error(
+                                            "The GeoTIFF uses " + rasterCode +
+                                            ", which cannot be transformed to " + mapCode +
+                                            ". This file may use a custom projection."
+                                        );
+                                    }
+                                }
+
+                                source.on("tileloaderror", function (event) {
+                                    console.error("🌐 Stage 16 GeoTIFF tile error:", event);
+                                    var status = document.getElementById("stage16-raster-status");
+                                    if (status) {
+                                        setStatus(status,
+                                            "The raster was added, but one or more tiles failed to render. Check the browser console.",
+                                            "err");
+                                    }
+                                });
+
+                                return {
+                                    layer: layer,
+                                    extent: rasterExtent,
+                                    projection: rasterProjection,
+                                    cleanup: null
+                                };
+                    });
+                });
+            });
+        });
+    }
+
+    function resolveRasterProjection(crs) {
+        crs = String(crs || "").trim();
+        if (!crs) {
+            return Promise.resolve(null);
+        }
+
+        var code = crs.toUpperCase();
+        if (/^\d+$/.test(code)) {
+            code = "EPSG:" + code;
+        }
+        if (!/^EPSG:\d+$/.test(code)) {
+            return Promise.reject(new Error("Enter a CRS as an EPSG code, for example EPSG:32643."));
+        }
+
+        var existing = ol.proj.get(code);
+        if (existing) {
+            return Promise.resolve(existing);
+        }
+
+        var epsg = code.slice(5);
+        return fetch("https://epsg.io/" + encodeURIComponent(epsg) + ".proj4")
+            .then(function (response) {
+                if (!response.ok) {
+                    throw new Error("CRS lookup failed for " + code + ".");
+                }
+                return response.text();
+            })
+            .then(function (definition) {
+                definition = definition.trim();
+                if (definition.charAt(0) !== "+") {
+                    throw new Error("No Proj4 definition was found for " + code + ".");
+                }
+                window.proj4.defs(code, definition);
+                ol.proj.proj4.register(window.proj4);
+                var projection = ol.proj.get(code);
+                if (!projection) {
+                    throw new Error("OpenLayers could not register " + code + ".");
+                }
+                return projection;
+            });
+    }
+
+    function fitRasterLayer(result) {
+        if (!result.extent || !result.projection) {
+            return;
+        }
+        var view = mapRef.getView();
+        var extent;
+        try {
+            extent = ol.proj.transformExtent(
+                result.extent,
+                result.projection,
+                view.getProjection()
+            );
+        } catch (error) {
+            console.warn("🌐 Stage 16: could not fit raster extent —", error.message);
+            return;
+        }
+
+        if (!extent || !extent.every(Number.isFinite) ||
+            extent[0] >= extent[2] || extent[1] >= extent[3]) {
+            console.warn("🌐 Stage 16: raster extent is invalid; map view was not changed.");
+            return;
+        }
+
+        var projectionExtent = view.getProjection().getExtent();
+        if (projectionExtent &&
+            (extent[0] < projectionExtent[0] - 1000000 ||
+             extent[1] < projectionExtent[1] - 1000000 ||
+             extent[2] > projectionExtent[2] + 1000000 ||
+             extent[3] > projectionExtent[3] + 1000000)) {
+            console.warn("🌐 Stage 16: raster extent is outside the map projection; map view was not changed.");
+            return;
+        }
+
+        try {
+            view.fit(extent, {
+                padding: [30, 30, 30, 30],
+                maxZoom: 16,
+                duration: 250
+            });
+        } catch (error) {
+            console.warn("🌐 Stage 16: could not zoom to raster —", error.message);
+        }
+    }
+
+    function importRasterFiles() {
+        var input = document.getElementById("stage16-raster-files");
+        var status = document.getElementById("stage16-raster-status");
+        var files = Array.from(input.files || []);
+        var crsSelect = document.getElementById("stage16-raster-crs");
+        var selectedCrs = crsSelect.value === "custom" ?
+            document.getElementById("stage16-raster-custom-crs").value.trim() :
+            crsSelect.value;
+
+        if (!files.length) {
+            setStatus(status, "Choose one or more MBTiles or GeoTIFF files first.", "err");
+            return;
+        }
+
+        if (crsSelect.value === "custom" && !selectedCrs) {
+            setStatus(status, "Enter the EPSG code to use for this GeoTIFF.", "err");
+            return;
+        }
+
+        var buttonEl = document.getElementById("stage16-raster-add");
+        buttonEl.disabled = true;
+        setStatus(status, "Importing raster files…");
+
+        files.reduce(function (chain, file) {
+            return chain.then(function (imported) {
+                var extensionMatch = file.name.match(/\.([^.]+)$/);
+                var extension = extensionMatch ? extensionMatch[1].toLowerCase() : "";
+                var type = extension === "mbtiles" ? "MBTiles" :
+                    (extension === "tif" || extension === "tiff" ? "GeoTIFF" : "");
+
+                if (!type) {
+                    throw new Error("Unsupported raster file: " + file.name);
+                }
+
+                var fileId = [
+                    type,
+                    file.name,
+                    file.size,
+                    file.lastModified,
+                    type === "GeoTIFF" ? selectedCrs : ""
+                ].join(":");
+                var title = file.name.replace(/\.(mbtiles|tif|tiff)$/i, "");
+
+                var layerPromise = type === "MBTiles" ?
+                    createMbtilesLayer(file) :
+                    createGeoTiffLayer(file, title, selectedCrs);
+
+                return layerPromise.then(function (result) {
+                    return storeRasterFile(fileId, file).then(function () {
+                        var added;
+                        try {
+                            added = addExternalBaseMap(result.layer, {
+                                type: type,
+                                name: title,
+                                title: title,
+                                fileId: fileId,
+                                crs: type === "GeoTIFF" ? selectedCrs : ""
+                            }, result.cleanup);
+                        } catch (error) {
+                            if (result.cleanup) {
+                                result.cleanup();
+                            }
+                            throw error;
+                        }
+
+                        if (!added) {
+                            if (result.cleanup) {
+                                result.cleanup();
+                            }
+                            throw new Error("This raster file has already been imported.");
+                        }
+
+                        fitRasterLayer(result);
+                        return imported + 1;
+                    }, function (error) {
+                        if (result.cleanup) {
+                            result.cleanup();
+                        }
+                        throw error;
+                    });
+                });
+            });
+        }, Promise.resolve(0)).then(function (count) {
+            setStatus(status, "✓ Imported " + count + " raster file(s).", "ok");
+            input.value = "";
+        }).catch(function (error) {
+            console.error("🌐 Stage 16 raster import:", error);
+            setStatus(status, "✕ " + error.message, "err");
+        }).then(function () {
+            buttonEl.disabled = false;
+        });
     }
 
     // =========================================================
@@ -397,6 +1042,7 @@ body.drag-edit-mode #${CONFIG.buttonId}:hover,
 }
 
 .stage16-tab-content input[type="text"],
+.stage16-tab-content input[type="file"],
 .stage16-tab-content select {
     width: 100%;
     height: 30px;
@@ -699,7 +1345,7 @@ body.drag-edit-mode #${CONFIG.buttonId}:hover,
         button = document.createElement("button");
         button.id = CONFIG.buttonId;
         button.type = "button";
-        button.title = "External Base Maps (WMS / WMTS / XYZ)";
+        button.title = "External Maps (WMS / WMTS / XYZ / MBTiles / GeoTIFF)";
 
         button.innerHTML = `
             <svg width="21" height="21" viewBox="0 0 24 24" fill="none"
@@ -755,6 +1401,7 @@ body.drag-edit-mode #${CONFIG.buttonId}:hover,
                 <button class="stage16-tab active" data-tab="wms"  type="button">WMS</button>
                 <button class="stage16-tab"        data-tab="wmts" type="button">WMTS</button>
                 <button class="stage16-tab"        data-tab="xyz"  type="button">XYZ</button>
+                <button class="stage16-tab"        data-tab="raster" type="button">RASTER</button>
                 <button class="stage16-tab"        data-tab="layers" type="button">
                     MAPS<span class="stage16-badge" id="stage16-count">0</span>
                 </button>
@@ -875,6 +1522,43 @@ body.drag-edit-mode #${CONFIG.buttonId}:hover,
                 </button>
             </div>
 
+            <!-- ============ RASTER FILES ============ -->
+            <div id="stage16-tab-raster" class="stage16-tab-content" style="display:none;">
+                <label for="stage16-raster-files">MBTiles / GeoTIFF files</label>
+                <input id="stage16-raster-files" type="file"
+                       accept=".mbtiles,.tif,.tiff" multiple/>
+                <label for="stage16-raster-crs">GeoTIFF source CRS</label>
+                <select id="stage16-raster-crs">
+                    <option value="">Auto-detect from GeoTIFF</option>
+                    <option value="EPSG:4326">EPSG:4326 — WGS 84</option>
+                    <option value="EPSG:3857">EPSG:3857 — Web Mercator</option>
+                    <option value="EPSG:32643">EPSG:32643 — UTM 43N</option>
+                    <option value="EPSG:32644">EPSG:32644 — UTM 44N</option>
+                    <option value="EPSG:32743">EPSG:32743 — UTM 43S</option>
+                    <option value="EPSG:32744">EPSG:32744 — UTM 44S</option>
+                    <option value="custom">Other EPSG code…</option>
+                </select>
+                <input id="stage16-raster-custom-crs" type="text"
+                       placeholder="EPSG code, e.g. 32643" style="display:none;"/>
+                <div class="stage16-hint">
+                    Choose the CRS used by the GeoTIFF coordinates. Use Auto-detect unless
+                    its embedded CRS is missing or incorrect. Custom EPSG definitions are
+                    looked up online. The raster is reprojected to the map CRS automatically.
+                </div>
+                <div class="stage16-hint">
+                    Add raster MBTiles (.mbtiles) or georeferenced GeoTIFF (.tif, .tiff).
+                    Files are stored in this browser for restoration.
+                </div>
+                <button id="stage16-raster-add" class="stage16-primary" type="button">
+                    Import Raster Files
+                </button>
+                <div id="stage16-raster-status" class="stage16-status"></div>
+                <div class="stage16-hint">
+                    Vector-tile MBTiles and non-georeferenced TIFF files are not supported.
+                    An invalid CRS will not change the map extent.
+                </div>
+            </div>
+
             <!-- ============ MANAGER ============ -->
             <div id="stage16-tab-layers" class="stage16-tab-content" style="display:none;">
                 <div id="stage16-layer-list" class="stage16-layer-list"></div>
@@ -886,11 +1570,33 @@ body.drag-edit-mode #${CONFIG.buttonId}:hover,
 
             <div class="stage16-footer">
                 External maps sit above the QGIS2Web base map and below all vector / parcel layers.
+                Imported raster files are saved in this browser.
             </div>
         `;
 
         document.body.appendChild(panel);
         bindPanelEvents();
+        refreshLayerManager();
+    }
+
+    function removeAllExternalLayers() {
+        var removed = externalLayers.slice();
+        externalLayers = [];
+        activeExternalBaseMap = null;
+
+        removed.forEach(function (item) {
+            mapRef.removeLayer(item.layer);
+            if (item.cleanup) {
+                item.cleanup();
+            }
+            if (item.metadata.fileId) {
+                deleteRasterFile(item.metadata.fileId).catch(function (error) {
+                    console.warn("🌐 Stage 16: could not delete stored raster —", error.message);
+                });
+            }
+        });
+
+        saveExternalLayers();
         refreshLayerManager();
     }
 
@@ -1067,6 +1773,26 @@ body.drag-edit-mode #${CONFIG.buttonId}:hover,
                 );
             });
 
+        document.getElementById("stage16-raster-add")
+            .addEventListener("click", importRasterFiles);
+
+        document.getElementById("stage16-raster-files")
+            .addEventListener("change", function () {
+                var status = document.getElementById("stage16-raster-status");
+                if (this.files.length) {
+                    setStatus(status, this.files.length + " file(s) selected.");
+                } else {
+                    setStatus(status, "");
+                }
+            });
+
+        document.getElementById("stage16-raster-crs")
+            .addEventListener("change", function () {
+                var customInput = document.getElementById("stage16-raster-custom-crs");
+                customInput.style.display = this.value === "custom" ? "block" : "none";
+                positionPanel();
+            });
+
         // --- XYZ presets ---
         panel.querySelectorAll(".stage16-preset").forEach(function (btn) {
             btn.addEventListener("click", function () {
@@ -1079,15 +1805,7 @@ body.drag-edit-mode #${CONFIG.buttonId}:hover,
         // --- Remove all ---
         document.getElementById("stage16-clear-all")
             .addEventListener("click", function () {
-                if (!externalLayers.length) {
-                    return;
-                }
-
-                if (!confirm("Remove ALL external base maps?")) {
-                    return;
-                }
-
-                externalLayers.slice().forEach(removeExternalLayer);
+                removeAllExternalLayers();
             });
 
         // --- CORS proxy ---
@@ -1701,9 +2419,12 @@ body.drag-edit-mode #${CONFIG.buttonId}:hover,
     // =========================================================
     // REGISTRATION & Z-INDEX
     // =========================================================
-    function addExternalBaseMap(layer, metadata) {
+    function addExternalBaseMap(layer, metadata, cleanup) {
         var duplicate = externalLayers.some(function (item) {
             var sameType = item.metadata.type === metadata.type;
+            if (metadata.fileId || item.metadata.fileId) {
+                return sameType && item.metadata.fileId === metadata.fileId;
+            }
             var sameUrl = item.metadata.url === metadata.url;
             var itemLayer = item.metadata.layer || "";
             var metaLayer = metadata.layer || "";
@@ -1723,7 +2444,8 @@ body.drag-edit-mode #${CONFIG.buttonId}:hover,
             id: "stage16-" + Date.now() + "-" +
                 Math.random().toString(36).substring(2, 8),
             layer: layer,
-            metadata: metadata
+            metadata: metadata,
+            cleanup: cleanup || null
         };
 
         layer.set("stage16Id", item.id);
@@ -1860,6 +2582,16 @@ body.drag-edit-mode #${CONFIG.buttonId}:hover,
             // ignore
         }
 
+        if (item.cleanup) {
+            item.cleanup();
+        }
+
+        if (item.metadata.fileId) {
+            deleteRasterFile(item.metadata.fileId).catch(function (error) {
+                console.warn("🌐 Stage 16: could not delete stored raster —", error.message);
+            });
+        }
+
         var index = externalLayers.indexOf(item);
 
         if (index >= 0) {
@@ -1900,7 +2632,7 @@ body.drag-edit-mode #${CONFIG.buttonId}:hover,
             container.innerHTML =
                 '<div class="stage16-empty">' +
                 'No external base maps yet.<br>' +
-                'Add one from the WMS, WMTS or XYZ tab.' +
+                'Add one from the WMS, WMTS, XYZ or Raster tab.' +
                 '</div>';
             return;
         }
@@ -2091,8 +2823,8 @@ body.drag-edit-mode #${CONFIG.buttonId}:hover,
                 opacity = entry.opacity;
             }
 
-            function finish(source) {
-                var layer = new ol.layer.Tile({
+            function finish(source, layerConstructor, cleanup, preparedLayer) {
+                var layer = preparedLayer || new (layerConstructor || ol.layer.Tile)({
                     source: source,
                     visible: false,
                     opacity: opacity,
@@ -2104,6 +2836,9 @@ body.drag-edit-mode #${CONFIG.buttonId}:hover,
                     }
                 });
 
+                layer.setVisible(false);
+                layer.setOpacity(opacity);
+
                 mapRef.addLayer(layer);
 
                 var itemId = entry.id;
@@ -2114,7 +2849,8 @@ body.drag-edit-mode #${CONFIG.buttonId}:hover,
                 var item = {
                     id: itemId,
                     layer: layer,
-                    metadata: meta
+                    metadata: meta,
+                    cleanup: cleanup || null
                 };
 
                 layer.set("stage16Id", item.id);
@@ -2177,6 +2913,21 @@ body.drag-edit-mode #${CONFIG.buttonId}:hover,
                 return;
             }
 
+            if (meta.type === "MBTiles" || meta.type === "GeoTIFF") {
+                loadRasterFile(meta.fileId)
+                    .then(function (blob) {
+                        if (meta.type === "MBTiles") {
+                            return createMbtilesLayer(blob);
+                        }
+                        return createGeoTiffLayer(blob, meta.title || meta.name, meta.crs);
+                    })
+                    .then(function (result) {
+                        finish(result.layer.getSource(), null, result.cleanup, result.layer);
+                    })
+                    .catch(reject);
+                return;
+            }
+
             reject(new Error("Unknown type: " + meta.type));
         });
     }
@@ -2210,7 +2961,7 @@ body.drag-edit-mode #${CONFIG.buttonId}:hover,
             return externalLayers.slice();
         },
         removeAll: function () {
-            externalLayers.slice().forEach(removeExternalLayer);
+            removeAllExternalLayers();
         },
         repositionPanel: positionPanel
     };
@@ -2230,7 +2981,7 @@ body.drag-edit-mode #${CONFIG.buttonId}:hover,
         waitForMap(function () {
             observeMapLayers();
             restoreExternalLayers();
-            console.log("🌐 Stage 16 v4.2 — External Base Map Services READY.");
+            console.log("🌐 Stage 16 v4.6 — External Map Services READY.");
         });
     }
 
