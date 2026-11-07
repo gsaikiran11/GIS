@@ -808,6 +808,30 @@ body.drag-edit-mode #' + CONFIG.buttonId + ':hover,\
 '      </div>' +
 '      <label>Rotation (degrees)</label>' +
 '      <input type="number" id="dse-label-rot" min="-180" max="180" step="1" value="0">' +
+'      <div class="dse-grid">' +
+'        <div><label>Outline color</label><input type="color" id="dse-label-stroke-color" value="#ffffff"></div>' +
+'        <div><label>Outline width</label><input type="number" id="dse-label-stroke-width" min="0" max="12" step="0.5" value="3"></div>' +
+'      </div>' +
+'      <div class="dse-grid">' +
+'        <div><label>Font family</label><select id="dse-label-font"><option value="Arial">Arial</option><option value="Verdana">Verdana</option><option value="Georgia">Georgia</option><option value="serif">Serif</option><option value="sans-serif">Sans serif</option><option value="monospace">Monospace</option></select></div>' +
+'        <div><label>Font weight</label><select id="dse-label-weight"><option value="normal">Normal</option><option value="bold">Bold</option></select></div>' +
+'      </div>' +
+'      <label>Placement</label>' +
+'      <select id="dse-label-placement"><option value="point">Feature center</option><option value="visible-center">Visible part center</option><option value="line">Along line</option></select>' +
+'      <div class="dse-grid">' +
+'        <div><label>Offset X (px)</label><input type="number" id="dse-label-offset-x" min="-100" max="100" step="1" value="0"></div>' +
+'        <div><label>Offset Y (px)</label><input type="number" id="dse-label-offset-y" min="-100" max="100" step="1" value="0"></div>' +
+'      </div>' +
+'      <label class="dse-check"><input type="checkbox" id="dse-label-bg-enabled"><span>Label background</span></label>' +
+'      <div class="dse-grid">' +
+'        <div><label>Background color</label><input type="color" id="dse-label-bg-color" value="#ffffff"></div>' +
+'        <div><label>Background padding</label><input type="number" id="dse-label-bg-padding" min="0" max="20" step="1" value="2"></div>' +
+'      </div>' +
+'      <label>Show from zoom level</label>' +
+'      <div class="dse-grid">' +
+'        <div><label>Minimum zoom</label><input type="number" id="dse-label-min-zoom" min="0" max="30" step="0.5" value="0"></div>' +
+'        <div><label>Maximum zoom</label><input type="number" id="dse-label-max-zoom" min="0" max="30" step="0.5" placeholder="No limit"></div>' +
+'      </div>' +
 '    </div>' +
 '  </div>' +
 
@@ -846,6 +870,18 @@ body.drag-edit-mode #' + CONFIG.buttonId + ':hover,\
         el.labelColor    = document.getElementById("dse-label-color");
         el.labelSize     = document.getElementById("dse-label-size");
         el.labelRot      = document.getElementById("dse-label-rot");
+        el.labelStrokeColor = document.getElementById("dse-label-stroke-color");
+        el.labelStrokeWidth = document.getElementById("dse-label-stroke-width");
+        el.labelFont     = document.getElementById("dse-label-font");
+        el.labelWeight   = document.getElementById("dse-label-weight");
+        el.labelPlacement = document.getElementById("dse-label-placement");
+        el.labelOffsetX  = document.getElementById("dse-label-offset-x");
+        el.labelOffsetY  = document.getElementById("dse-label-offset-y");
+        el.labelBgEnabled = document.getElementById("dse-label-bg-enabled");
+        el.labelBgColor  = document.getElementById("dse-label-bg-color");
+        el.labelBgPadding = document.getElementById("dse-label-bg-padding");
+        el.labelMinZoom  = document.getElementById("dse-label-min-zoom");
+        el.labelMaxZoom  = document.getElementById("dse-label-max-zoom");
         el.applyBtn      = document.getElementById("dse-apply");
         el.resetBtn      = document.getElementById("dse-reset");
         el.status        = document.getElementById("dse-status");
@@ -994,7 +1030,19 @@ body.drag-edit-mode #' + CONFIG.buttonId + ':hover,\
             labelField: el.labelField.value,
             labelColor: el.labelColor.value,
             labelSize: parseFloat(el.labelSize.value),
-            labelRotation: parseFloat(el.labelRot.value)
+            labelRotation: parseFloat(el.labelRot.value),
+            labelStrokeColor: el.labelStrokeColor.value,
+            labelStrokeWidth: parseFloat(el.labelStrokeWidth.value),
+            labelFont: el.labelFont.value,
+            labelWeight: el.labelWeight.value,
+            labelPlacement: el.labelPlacement.value,
+            labelOffsetX: parseFloat(el.labelOffsetX.value),
+            labelOffsetY: parseFloat(el.labelOffsetY.value),
+            labelBgEnabled: el.labelBgEnabled.checked,
+            labelBgColor: el.labelBgColor.value,
+            labelBgPadding: parseFloat(el.labelBgPadding.value),
+            labelMinZoom: parseFloat(el.labelMinZoom.value) || 0,
+            labelMaxZoom: el.labelMaxZoom.value === "" ? null : parseFloat(el.labelMaxZoom.value)
         };
 
         el.catList.querySelectorAll(".dse-cat-color").forEach(function (input) {
@@ -1004,59 +1052,115 @@ body.drag-edit-mode #' + CONFIG.buttonId + ':hover,\
         return config;
     }
 
-    function createSingleStyle(config) {
-        return function (feature) {
-            var opts = {
-                fill: new ol.style.Fill({ color: hexToRgba(config.fillColor, config.fillOpacity) }),
-                stroke: new ol.style.Stroke({ color: config.strokeColor, width: config.strokeWidth })
-            };
+    function clipRingToExtent(ring, extent) {
+        var points = ring.slice(0, -1).map(function (coordinate) { return coordinate.slice(0, 2); });
+        var boundaries = [
+            { inside: function (p) { return p[0] >= extent[0]; }, intersect: function (a, b) { var t = (extent[0] - a[0]) / (b[0] - a[0]); return [extent[0], a[1] + t * (b[1] - a[1])]; } },
+            { inside: function (p) { return p[0] <= extent[2]; }, intersect: function (a, b) { var t = (extent[2] - a[0]) / (b[0] - a[0]); return [extent[2], a[1] + t * (b[1] - a[1])]; } },
+            { inside: function (p) { return p[1] >= extent[1]; }, intersect: function (a, b) { var t = (extent[1] - a[1]) / (b[1] - a[1]); return [a[0] + t * (b[0] - a[0]), extent[1]]; } },
+            { inside: function (p) { return p[1] <= extent[3]; }, intersect: function (a, b) { var t = (extent[3] - a[1]) / (b[1] - a[1]); return [a[0] + t * (b[0] - a[0]), extent[3]]; } }
+        ];
+        boundaries.forEach(function (boundary) {
+            var output = [];
+            if (!points.length) return;
+            var previous = points[points.length - 1];
+            points.forEach(function (current) {
+                var previousInside = boundary.inside(previous), currentInside = boundary.inside(current);
+                if (currentInside) {
+                    if (!previousInside) output.push(boundary.intersect(previous, current));
+                    output.push(current);
+                } else if (previousInside) output.push(boundary.intersect(previous, current));
+                previous = current;
+            });
+            points = output;
+        });
+        if (points.length < 3) return null;
+        points.push(points[0].slice());
+        return points;
+    }
 
-            if (config.labelEnabled && config.labelField) {
-                var v = feature.get(config.labelField);
-                if (v !== undefined && v !== null && String(v).trim() !== "") {
-                    opts.text = new ol.style.Text({
-                        text: String(v),
-                        font: config.labelSize + "px Arial",
-                        fill: new ol.style.Fill({ color: config.labelColor }),
-                        stroke: new ol.style.Stroke({ color: "#fff", width: 3 }),
-                        textAlign: "center", textBaseline: "middle",
-                        placement: "point", overflow: true,
-                        rotation: (config.labelRotation * Math.PI) / 180
-                    });
-                }
+    function visibleLabelGeometry(feature) {
+        var m = getMap(), geometry = feature.getGeometry();
+        if (!m || !geometry) return geometry;
+        var size = m.getSize();
+        if (!size) return geometry;
+        var extent = m.getView().calculateExtent(size), type = geometry.getType();
+        if (type !== "Polygon" && type !== "MultiPolygon") return geometry;
+        var coordinates = geometry.getCoordinates();
+        var polygons = type === "Polygon" ? [coordinates] : coordinates;
+        var visible = [];
+        polygons.forEach(function (rings) {
+            var clippedOuter = clipRingToExtent(rings[0], extent);
+            if (!clippedOuter) return;
+            var clippedRings = [clippedOuter];
+            for (var i = 1; i < rings.length; i++) {
+                var clippedHole = clipRingToExtent(rings[i], extent);
+                if (clippedHole) clippedRings.push(clippedHole);
             }
+            visible.push(clippedRings);
+        });
+        if (!visible.length) return null;
+        return type === "Polygon" ? new ol.geom.Polygon(visible[0]) : new ol.geom.MultiPolygon(visible);
+    }
 
-            return new ol.style.Style(opts);
+    function createLabelStyle(feature, config) {
+        if (!config.labelEnabled || !config.labelField) return null;
+        var view = getMap() && getMap().getView();
+        var zoom = view && typeof view.getZoom === "function" ? view.getZoom() : undefined;
+        if (typeof zoom === "number" && isFinite(zoom)) {
+            if (isFinite(config.labelMinZoom) && zoom < config.labelMinZoom) return null;
+            if (config.labelMaxZoom !== null && config.labelMaxZoom !== undefined && isFinite(config.labelMaxZoom) && zoom > config.labelMaxZoom) return null;
+        }
+        var value = feature.get(config.labelField);
+        if (value === undefined || value === null || String(value).trim() === "") return null;
+
+        var textOptions = {
+            text: String(value),
+            font: (config.labelWeight || "normal") + " " + (config.labelSize || 12) + "px " + (config.labelFont || "Arial"),
+            fill: new ol.style.Fill({ color: config.labelColor || "#000000" }),
+            textAlign: "center",
+            textBaseline: "middle",
+            placement: config.labelPlacement === "line" ? "line" : "point",
+            overflow: true,
+            rotation: ((config.labelRotation || 0) * Math.PI) / 180,
+            offsetX: config.labelOffsetX || 0,
+            offsetY: config.labelOffsetY || 0
         };
+        if ((config.labelStrokeWidth || 0) > 0) {
+            textOptions.stroke = new ol.style.Stroke({ color: config.labelStrokeColor || "#ffffff", width: config.labelStrokeWidth });
+        }
+        if (config.labelBgEnabled) {
+            textOptions.backgroundFill = new ol.style.Fill({ color: config.labelBgColor || "#ffffff" });
+            var padding = Math.max(0, config.labelBgPadding || 0);
+            textOptions.padding = [padding, padding, padding, padding];
+        }
+
+        var styleOptions = { text: new ol.style.Text(textOptions) };
+        if (config.labelPlacement === "visible-center") {
+            styleOptions.geometry = function (item) { return visibleLabelGeometry(item); };
+        }
+        return new ol.style.Style(styleOptions);
+    }
+
+    function createFeatureStyles(feature, config, fillColor) {
+        var styles = [new ol.style.Style({
+            fill: new ol.style.Fill({ color: hexToRgba(fillColor, config.fillOpacity) }),
+            stroke: new ol.style.Stroke({ color: config.strokeColor, width: config.strokeWidth })
+        })];
+        var labelStyle = createLabelStyle(feature, config);
+        if (labelStyle) styles.push(labelStyle);
+        return styles;
+    }
+
+    function createSingleStyle(config) {
+        return function (feature) { return createFeatureStyles(feature, config, config.fillColor); };
     }
 
     function createCategorizedStyle(config) {
         return function (feature) {
-            var val = feature.get(config.categoryField);
-            var txt = (val === undefined || val === null) ? "" : String(val);
-            var fillColor = config.categoryColors[txt] || config.fillColor;
-
-            var opts = {
-                fill: new ol.style.Fill({ color: hexToRgba(fillColor, config.fillOpacity) }),
-                stroke: new ol.style.Stroke({ color: config.strokeColor, width: config.strokeWidth })
-            };
-
-            if (config.labelEnabled && config.labelField) {
-                var v = feature.get(config.labelField);
-                if (v !== undefined && v !== null && String(v).trim() !== "") {
-                    opts.text = new ol.style.Text({
-                        text: String(v),
-                        font: config.labelSize + "px Arial",
-                        fill: new ol.style.Fill({ color: config.labelColor }),
-                        stroke: new ol.style.Stroke({ color: "#fff", width: 3 }),
-                        textAlign: "center", textBaseline: "middle",
-                        placement: "point", overflow: true,
-                        rotation: (config.labelRotation * Math.PI) / 180
-                    });
-                }
-            }
-
-            return new ol.style.Style(opts);
+            var value = feature.get(config.categoryField);
+            var key = (value === undefined || value === null) ? "" : String(value);
+            return createFeatureStyles(feature, config, config.categoryColors[key] || config.fillColor);
         };
     }
 
@@ -1123,6 +1227,18 @@ body.drag-edit-mode #' + CONFIG.buttonId + ':hover,\
         el.labelColor.value = "#000000";
         el.labelSize.value = "12";
         el.labelRot.value = "0";
+        el.labelStrokeColor.value = "#ffffff";
+        el.labelStrokeWidth.value = "3";
+        el.labelFont.value = "Arial";
+        el.labelWeight.value = "normal";
+        el.labelPlacement.value = "point";
+        el.labelOffsetX.value = "0";
+        el.labelOffsetY.value = "0";
+        el.labelBgEnabled.checked = false;
+        el.labelBgColor.value = "#ffffff";
+        el.labelBgPadding.value = "2";
+        el.labelMinZoom.value = "0";
+        el.labelMaxZoom.value = "";
         el.catField.value = "";
         el.labelField.value = "";
         el.fillOpacityVal.textContent = "45%";
@@ -1145,6 +1261,18 @@ body.drag-edit-mode #' + CONFIG.buttonId + ':hover,\
             if (config.labelColor) el.labelColor.value = config.labelColor;
             if (config.labelSize !== undefined) el.labelSize.value = config.labelSize;
             if (config.labelRotation !== undefined) el.labelRot.value = config.labelRotation;
+            if (config.labelStrokeColor) el.labelStrokeColor.value = config.labelStrokeColor;
+            if (config.labelStrokeWidth !== undefined) el.labelStrokeWidth.value = config.labelStrokeWidth;
+            if (config.labelFont) el.labelFont.value = config.labelFont;
+            if (config.labelWeight) el.labelWeight.value = config.labelWeight;
+            if (config.labelPlacement) el.labelPlacement.value = config.labelPlacement;
+            if (config.labelOffsetX !== undefined) el.labelOffsetX.value = config.labelOffsetX;
+            if (config.labelOffsetY !== undefined) el.labelOffsetY.value = config.labelOffsetY;
+            if (config.labelBgEnabled !== undefined) el.labelBgEnabled.checked = config.labelBgEnabled;
+            if (config.labelBgColor) el.labelBgColor.value = config.labelBgColor;
+            if (config.labelBgPadding !== undefined) el.labelBgPadding.value = config.labelBgPadding;
+            if (config.labelMinZoom !== undefined) el.labelMinZoom.value = config.labelMinZoom;
+            if (config.labelMaxZoom !== undefined && config.labelMaxZoom !== null) el.labelMaxZoom.value = config.labelMaxZoom;
 
             updateCategoryVisibility();
             if (config.styleType === "categorized") populateCategoryValues();
