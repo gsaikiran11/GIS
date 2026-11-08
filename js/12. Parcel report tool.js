@@ -68,6 +68,7 @@
         .prt-panel, .prt-toast, .prt-modal, .prt-text-element, .prt-table-element {
           font-family: 'Noto Sans Telugu','Noto Sans',Arial,sans-serif !important;
         }
+
       `;
       document.head.appendChild(style);
     }
@@ -185,22 +186,40 @@
   .prt-props-panel.expanded{width:300px;flex-shrink:0}
   .prt-props-rail{position:absolute;z-index:9;right:0;top:50%;transform:translateY(-50%);width:28px;height:58px;border:1px solid var(--prt-gray-300);border-right:0;border-radius:10px 0 0 10px;background:#fff;color:var(--prt-gray-700);box-shadow:var(--prt-shadow);cursor:pointer;font-size:20px;line-height:1}
   .prt-props-rail:hover{background:var(--prt-primary-light);color:var(--prt-primary)}
-  .prt-cad-dock{position:absolute;z-index:7;bottom:10px;left:50%;transform:translateX(-50%);width:min(720px,calc(100% - 24px));background:#fff;border:1px solid var(--prt-gray-300);border-radius:12px;box-shadow:var(--prt-shadow-lg);overflow:hidden}
-  .prt-cad-dock-header{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 10px;background:#fff}
+  .prt-cad-dock{position:absolute;z-index:7;bottom:10px;left:50%;transform:translateX(-50%);width:min(760px,calc(100% - 24px));background:#fff;border:1px solid var(--prt-gray-300);border-radius:14px;box-shadow:var(--prt-shadow-lg);overflow:hidden}
+  .prt-cad-dock-header{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 12px;background:linear-gradient(180deg,#fff,#f8fafc)}
   .prt-sketch-draft-actions{position:absolute;z-index:11;top:10px;left:50%;transform:translateX(-50%);display:flex;gap:10px;padding:6px;background:#fff;border:1px solid var(--prt-gray-300);border-radius:14px;box-shadow:var(--prt-shadow-lg)}
   .prt-sketch-draft-actions[hidden]{display:none}
-  .prt-sketch-draft-action{display:flex;align-items:center;justify-content:center;width:48px;height:48px;border:0;border-radius:12px;color:#fff;font-size:30px;font-weight:700;line-height:1;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+  .prt-sketch-draft-action{display:flex;align-items:center;justify-content:center;width:42px;height:42px;border:0;border-radius:12px;color:#fff;font-size:24px;font-weight:700;line-height:1;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+  .prt-sketch-draft-action:disabled{opacity:.35;cursor:default}
+  .prt-sketch-draft-undo,.prt-sketch-draft-redo{background:#334155}
   .prt-sketch-draft-cancel{background:var(--prt-danger)}
   .prt-sketch-draft-confirm{background:var(--prt-success)}
-  .prt-cad-tools{display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:8px;border-top:1px solid var(--prt-gray-200);max-height:150px;overflow:auto}
-  .prt-cad-dimensions{display:grid;grid-template-columns:minmax(140px,1.4fr) minmax(110px,1fr) minmax(110px,1fr) auto auto;align-items:center;gap:6px;flex:1 0 100%;min-width:0;padding-top:6px;border-top:1px solid var(--prt-gray-200)}
-  .prt-cad-dimensions strong{grid-column:1/-1}
-  .prt-cad-dimensions .prt-input{box-sizing:border-box;min-width:0;width:100%;padding:6px 8px;font-size:12px}
+  .prt-cad-tools{display:grid;grid-template-columns:repeat(auto-fit,minmax(128px,1fr));align-content:start;align-items:stretch;gap:7px;padding:10px;border-top:1px solid var(--prt-gray-200);max-height:210px;overflow:auto}
+  .prt-cad-tools>.prt-btn{min-height:36px;border-radius:9px}
+  .prt-cad-tools>[data-cad-mode]{min-width:0}
+  .prt-cad-tools>.prt-btn.active,.prt-cad-tools>.prt-btn.prt-btn-primary{box-shadow:0 0 0 2px var(--prt-primary-light)}
+  .prt-cad-snap-controls{grid-column:1/-1;display:flex;align-items:center;gap:4px;position:relative}
+  .prt-cad-snap-options{grid-column:1/-1}
+  .prt-cad-snap-options[hidden]{display:none}
+  .prt-cad-snap-options .prt-input{grid-column:1/-1}
+  .prt-cad-snap-options>[data-cad-snap-mode]{min-height:34px}
+  .prt-grip-control{display:grid;gap:6px;padding:10px 0 4px;border-top:1px solid var(--prt-gray-200)}
+  .prt-grip-control-heading{display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--prt-gray-700)}
+  .prt-grip-control input{width:100%;accent-color:var(--prt-primary)}
+  .prt-cad-lock{grid-column:1/-1}
+  .prt-dimension-editor{position:absolute;z-index:12;top:10px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:6px;max-width:calc(100% - 20px);padding:7px;background:#fff;border:1px solid var(--prt-gray-300);border-radius:12px;box-shadow:var(--prt-shadow-lg)}
+  .prt-dimension-editor[hidden]{display:none}
+  .prt-dimension-editor input{width:min(220px,38vw);min-width:100px;padding:8px;border:1px solid var(--prt-gray-300);border-radius:8px}
+  .prt-dimension-editor button{width:38px;height:38px;border:0;border-radius:9px;color:#fff;font-size:20px;font-weight:700;cursor:pointer}
+  .prt-dimension-editor .prt-dimension-editor-apply{background:var(--prt-primary);font-size:16px}
   .prt-cad-tools.collapsed{display:none}
   .prt-cad-tools .prt-btn.active{background:var(--prt-primary-light);color:var(--prt-primary);border-color:var(--prt-primary)}
   .prt-dimension-node{fill:#fff;stroke:#7c3aed;stroke-width:1.5;cursor:crosshair;pointer-events:all}
   .prt-dimension-node-hit{fill:transparent;stroke:transparent;pointer-events:all;touch-action:none}
   .prt-dimension-node:hover{fill:#ddd6fe}
+  .prt-dimension-label{cursor:text;pointer-events:all}
+  .prt-dimension-editor button:disabled{opacity:.35;cursor:not-allowed}
   .prt-page-canvas.cad-touch-active{touch-action:none}
   .prt-designer-overlay.prt-pinch-active .prt-canvas-element{pointer-events:none!important}
   .prt-touch-magnifier{position:fixed;z-index:200040;width:132px;height:132px;border:3px solid #2563eb;border-radius:50%;overflow:hidden;background:#fff;box-shadow:0 4px 16px rgba(0,0,0,.35);pointer-events:none;display:none}
@@ -214,12 +233,9 @@
   .prt-cad-nudge button{padding:0!important;min-height:38px!important}
   @media(max-width:768px){
     .prt-cad-dock{bottom:4px;width:calc(100% - 12px);max-height:42dvh;display:flex;flex-direction:column}
-    .prt-cad-tools{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-content:start;gap:6px;padding:8px;max-height:36dvh;overflow-y:auto;overscroll-behavior:contain}
+    .prt-cad-tools{grid-template-columns:repeat(2,minmax(0,1fr));align-content:start;gap:6px;padding:8px;max-height:36dvh;overflow-y:auto;overscroll-behavior:contain}
     .prt-cad-tools .prt-btn{min-height:46px;padding:8px 10px;white-space:normal;line-height:1.2;touch-action:manipulation}
     .prt-designer-overlay .prt-cad-tools .prt-btn{min-height:46px}
-    .prt-cad-dimensions{grid-column:1/-1;grid-template-columns:repeat(2,minmax(0,1fr));min-width:0;overflow:visible}
-    .prt-cad-dimensions .prt-select{grid-column:1/-1;min-height:44px}
-    .prt-cad-dimensions .prt-input{min-height:44px;font-size:16px}
     .prt-cad-vertex-editor .prt-input{min-height:44px;font-size:16px}
     .prt-sketch-draft-action{width:54px;height:54px}
     .prt-designer-overlay .prt-tool-btn{min-height:46px}
@@ -235,8 +251,8 @@
     .prt-cad-tools{max-height:40dvh}
   }
   @media(max-width:768px){.prt-toolbar-main{box-sizing:border-box;width:calc(100% - 5px);min-width:0;padding:5px;gap:4px;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));grid-template-areas:"back tools spacer pdf" "page page zoom zoom"}.prt-toolbar-title{display:none}.prt-back-btn{grid-area:back;justify-self:start}.prt-toolbar-toggle{grid-area:tools;justify-self:start}.prt-pdf-btn{grid-area:pdf;justify-self:end}.prt-page-box{grid-area:page;width:100%;min-width:0;justify-content:flex-start}.prt-page-box>.prt-zoom-label{display:none}.prt-page-box .prt-select{width:auto!important;flex:1;min-width:50px}.prt-page-box .prt-btn{padding:6px 7px}.prt-zoom-box{grid-area:zoom;justify-content:flex-end;gap:3px;padding:3px 4px;min-width:0}.prt-page-box{grid-area:page}.prt-designer-canvas-area{padding:4px}.prt-toolbar-tools:not(.collapsed){position:absolute;top:0;bottom:0;left:0;width:min(220px,82vw);flex-basis:min(220px,82vw);box-shadow:var(--prt-shadow-lg)}.prt-props-panel.expanded{width:min(320px,88vw)}.prt-selection-bar{padding:8px;gap:6px}.prt-selection-bar-info{font-size:12px}.prt-selection-confirm,.prt-selection-cancel,.prt-selection-toolbtn{width:40px;height:40px}}
-  @media(max-width:480px){.prt-designer-toolbar{flex-shrink:0}.prt-toolbar-main{box-sizing:border-box;width:100%;min-width:0;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));grid-template-areas:"back tools spacer pdf" "page page zoom zoom";justify-content:stretch;overflow:visible}.prt-back-btn{grid-area:back}.prt-toolbar-toggle{grid-area:tools}.prt-pdf-btn{grid-area:pdf}.prt-page-box{grid-area:page;width:100%;min-width:0;justify-content:flex-start}.prt-page-box .prt-zoom-label{min-width:auto}.prt-page-box .prt-select{width:auto!important;flex:1;min-width:50px}.prt-page-box .prt-btn{padding:6px 7px}.prt-zoom-box{gap:3px;padding:3px 4px;flex-shrink:0;grid-area:zoom;justify-content:flex-end}.prt-page-box{grid-area:page}.prt-zoom-label{min-width:42px;font-size:11px}.prt-toolbar-tools:not(.collapsed){width:min(220px,82vw);flex-basis:min(220px,82vw)}.prt-tool-btn{min-height:40px;font-size:11px}.prt-tool-btn svg{width:16px;height:16px}.prt-cad-dock{bottom:6px;width:calc(100% - 12px)}.prt-cad-tools{max-height:30dvh;gap:4px;padding:6px}.prt-cad-tools .prt-btn{min-height:38px}.prt-cad-dimensions{min-width:560px;overflow-x:auto}.prt-layer-manager{max-width:calc(100vw - 16px)}}
-  @media(max-width:480px){.prt-toolbar-main{width:calc(100% - 5px)}.prt-cad-dimensions{grid-template-columns:repeat(2,minmax(0,1fr));min-width:0;overflow:visible}.prt-cad-dimensions .prt-select{grid-column:1/-1}}
+  @media(max-width:480px){.prt-designer-toolbar{flex-shrink:0}.prt-toolbar-main{box-sizing:border-box;width:100%;min-width:0;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));grid-template-areas:"back tools spacer pdf" "page page zoom zoom";justify-content:stretch;overflow:visible}.prt-back-btn{grid-area:back}.prt-toolbar-toggle{grid-area:tools}.prt-pdf-btn{grid-area:pdf}.prt-page-box{grid-area:page;width:100%;min-width:0;justify-content:flex-start}.prt-page-box .prt-zoom-label{min-width:auto}.prt-page-box .prt-select{width:auto!important;flex:1;min-width:50px}.prt-page-box .prt-btn{padding:6px 7px}.prt-zoom-box{gap:3px;padding:3px 4px;flex-shrink:0;grid-area:zoom;justify-content:flex-end}.prt-page-box{grid-area:page}.prt-zoom-label{min-width:42px;font-size:11px}.prt-toolbar-tools:not(.collapsed){width:min(220px,82vw);flex-basis:min(220px,82vw)}.prt-tool-btn{min-height:40px;font-size:11px}.prt-tool-btn svg{width:16px;height:16px}.prt-cad-dock{bottom:6px;width:calc(100% - 12px)}.prt-cad-tools{max-height:30dvh;gap:4px;padding:6px}.prt-cad-tools .prt-btn{min-height:38px}.prt-grip-control{padding-top:8px}.prt-layer-manager{max-width:calc(100vw - 16px)}}
+  @media(max-width:480px){.prt-toolbar-main{width:calc(100% - 5px)}}
   .prt-props-header{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 12px;background:var(--prt-gray-100);border-bottom:1px solid var(--prt-gray-200);flex-shrink:0;cursor:move}
   .prt-props-min-btn{border:1px solid var(--prt-gray-200);background:#fff;border-radius:8px;padding:4px 8px;cursor:pointer;font-size:11px}
   .prt-props-panel.minimized .prt-props-body{display:none}
@@ -669,7 +685,7 @@
               if(poly.hiddenDimensions?.includes(key))return;
               const nodes=poly.dimensionNodes?.[key]||[dimension.a,dimension.b];
               const length=Projection.distance(nodes[0],nodes[1]);
-              const label=dimension.label??poly.dimensionLabels?.[key]??UNITS.formatLength(length,options.lengthUnit);
+              const label=poly.dimensionLabels?.[key]??dimension.label??UNITS.formatLength(length,options.lengthUnit);
               svg+=this._renderDimension([tx(nodes[0][0]),ty(nodes[0][1])],[tx(nodes[1][0]),ty(nodes[1][1])],label,centroid,placed,options,key,poly.dimensionOffsets?.[key],idx);
               if(options.showDimensionNodes)svg+=this._renderDimensionNodes([tx(nodes[0][0]),ty(nodes[0][1])],[tx(nodes[1][0]),ty(nodes[1][1])],key,idx,options.handleHitRadius,options.handleVisibleRadius);
             });
@@ -686,20 +702,20 @@
           const areaM2 = Projection.polygonAreaM2(ringsProj[0]);
 
           let labelLines = [];
-          if (poly.label != null) {
-            labelLines.push(String(poly.label));
-          } else if (options.labelFields && options.labelFields.length) {
+          const plotLabel=poly.label==null?'':String(poly.label).trim();
+          if(plotLabel)labelLines.push(plotLabel);
+          if (options.labelFields && options.labelFields.length) {
             options.labelFields.forEach(f => {
               if (f === '__area__') {
                 labelLines.push(UNITS.formatArea(areaM2, options.areaUnit));
               } else {
                 const v = poly.properties?.[f];
-                if (v != null) labelLines.push(String(v));
+                if (v != null && String(v)!==plotLabel) labelLines.push(String(v));
               }
             });
           } else {
             const name = poly.properties?.name || poly.properties?.id || poly.properties?.OBJECTID || `Plot ${idx+1}`;
-            labelLines.push(String(name));
+            if(String(name)!==plotLabel)labelLines.push(String(name));
             if (options.showAreaInLabel) labelLines.push(UNITS.formatArea(areaM2, options.areaUnit));
           }
 
@@ -794,7 +810,7 @@
       // Label
       dimSvg += `<g transform="rotate(${angle.toFixed(1)}, ${om[0].toFixed(1)}, ${om[1].toFixed(1)})">
         <rect x="${(om[0]-lw/2).toFixed(1)}" y="${(om[1]-lh/2).toFixed(1)}" width="${lw}" height="${lh}" fill="${options.dimBackground}" stroke="#cbd5e1" stroke-width="0.5" rx="2"/>
-        <text x="${om[0].toFixed(1)}" y="${(om[1]+fontSize/3.5).toFixed(1)}" text-anchor="middle" font-size="${fontSize}" fill="${options.dimColor}">${Utils.escapeXml(label)}</text>
+        <text class="prt-dimension-label" data-prt-dimension-text="true" x="${om[0].toFixed(1)}" y="${(om[1]+fontSize/3.5).toFixed(1)}" text-anchor="middle" font-size="${fontSize}" fill="${options.dimColor}">${Utils.escapeXml(label)}</text>
       </g></g>`;
       return dimSvg;
     }
@@ -878,19 +894,23 @@
       this.snapModes = { vertices:true, edges:true, intersections:true, grid:false };
       this.snapTolerance = 24;
       this.snapGridMeters = 1;
+      this.gripSize = 7;
+      this.cadMovementLocked = false;
       this.vertexSelect = null;
       this.vertexXInput = null;
       this.vertexYInput = null;
       this.vertexStepInput = null;
       this.vertexLengthInput = null;
       this.vertexAngleInput = null;
-      this.snapGridInput = null;
       this.snapToleranceInput = null;
       this.snapModeButtons = {};
+      this.gripSizeInput = null;
+      this.gripSizeValue = null;
+      this.dimensionEditor = null;
+      this.dimensionEditorInput = null;
+      this.dimensionEdit = null;
       this._regenTimers = new WeakMap();
       this.cadToggleBtn = null; this.cadToolsPanel = null; this.cadDraftActions = null; this.propsRailBtn = null;
-      this.cadEdgeSelect = null; this.cadDimensionLabel = null; this.cadDimensionLength = null;
-      this.cadEdgeSignature = '';
       this.propsExpanded = false; this.cadExpanded = false;
       this._historyDebouncer = Utils.debounce((reason) => this._commitHistoryNow(reason), CONFIG.historyDebounceMs);
 
@@ -980,6 +1000,7 @@
 
     close() {
       if(this._cadTouchDrawing)clearTimeout(this._cadTouchDrawing.timer);
+      this._cancelDimensionEdit();
       this._cadTouchDrawing=null;
       this._cadTouchPreview=null;
       this._hideTouchMagnifier();
@@ -1071,6 +1092,19 @@
       this.canvas.addEventListener('touchstart', (e) => this._canvasTouchStart(e), { passive: false });
       this.canvas.addEventListener('click', (e) => { if (!this._pinchActive&&e.target === this.canvas) this._selectElement(null); });
       this.canvas.addEventListener('dblclick', (e) => {
+        const dimensionText=e.target?.closest?.('[data-prt-dimension-text]');
+        if(dimensionText) {
+          const dimension=dimensionText.closest('[data-prt-dimension-key]');
+          if(dimension&&this.selectedElement?.type==='sketch') {
+            e.preventDefault();
+            this._openDimensionEditor(
+              dimension.dataset.prtDimensionKey,
+              Number(dimension.dataset.prtPolygon),
+              dimensionText.textContent||''
+            );
+            return;
+          }
+        }
         if (this.sketchEditMode === 'draw-polygon' || this.sketchEditMode === 'draw-line') {
           e.preventDefault();
           this._finishSketchGeometry(this.sketchEditMode === 'draw-polygon' ? 'Polygon' : 'LineString');
@@ -1091,6 +1125,8 @@
         { id:'line',    icon:ICONS.line,    label:'Line',    action:() => this._setTool('line') },
         { id:'arrow',   icon:ICONS.line,    label:'Arrow',   action:() => this._setTool('arrow') },
         { id:'rect',    icon:ICONS.rect,    label:'Rect',    action:() => this._setTool('rect') },
+        { id:'border',  icon:ICONS.rect,    label:'Border',  action:() => this._addPageBorder() },
+        { id:'divider', icon:ICONS.line,    label:'Divider', action:() => this._addPageDivider() },
         { id:'sketch',  icon:ICONS.sketch,  label:'Sketch',  action:() => this._addSketchElement() },
         { id:'details', icon:ICONS.details, label:'Details', action:() => this._openDetailsModal() },
         { id:'qr',      icon:ICONS.qr,      label:'QR',      action:() => this._openQRModal() },
@@ -1129,6 +1165,26 @@
           innerHTML: `${t.icon}<span>${t.label}</span>`, onClick: t.action
         }));
       });
+      this.toolsPanel.appendChild(Utils.createElement('div',{className:'prt-tool-separator'}));
+      const gripControl=Utils.createElement('label',{className:'prt-grip-control'});
+      const gripHeading=Utils.createElement('span',{className:'prt-grip-control-heading'});
+      gripHeading.append(
+        Utils.createElement('strong',{textContent:'Boundary grip size'}),
+        this.gripSizeValue=Utils.createElement('output',{textContent:String(this.gripSize)})
+      );
+      this.gripSizeInput=Utils.createElement('input',{
+        type:'range',min:'4',max:'18',step:'1',value:String(this.gripSize),
+        'aria-label':'Boundary grip size'
+      });
+      this.gripSizeInput.addEventListener('input',()=>{
+        this.gripSize=Number(this.gripSizeInput.value);
+        this.gripSizeValue.textContent=String(this.gripSize);
+        this.elements.forEach(element=>{
+          if(element.type==='sketch')this._regenSketch(element);
+        });
+      });
+      gripControl.append(gripHeading,this.gripSizeInput);
+      this.toolsPanel.appendChild(gripControl);
     }
 
     _buildCADPanel(workspace) {
@@ -1153,7 +1209,7 @@
         ['Draw point','draw-point'],
         ['Draw line','draw-line'],
         ['Draw polygon','draw-polygon'],
-        ['Edit dimension nodes','edit-dimensions'],
+        ['Edit dimensions','edit-dimensions'],
         ['Draw dimension','draw-dimension'],
         ['Delete dimension','delete-dimension']
       ];
@@ -1166,22 +1222,41 @@
         });
         this.cadToolsPanel.appendChild(button);
       });
-      this.cadToolsPanel.appendChild(Utils.createElement('button',{
+      const snapControls=Utils.createElement('div',{className:'prt-cad-snap-controls'});
+      snapControls.appendChild(Utils.createElement('button',{
         className:`prt-btn prt-btn-sm ${this.snapEnabled?'prt-btn-primary':'prt-btn-outline'}`,
-        textContent:`Snap ${this.snapEnabled?'On':'Off'}`,
+        textContent:'Snap',
+        title:'Toggle snapping',
+        'aria-pressed':String(this.snapEnabled),
         'data-cad-snap':'true',
         onClick:()=>{
           this.snapEnabled=!this.snapEnabled;
           this._updateCADPanel();
         }
       }));
+      const snapSettingsButton=Utils.createElement('button',{
+        className:'prt-btn prt-btn-outline prt-btn-sm',
+        textContent:'⚙',
+        title:'Snapping settings',
+        'aria-label':'Snapping settings',
+        'aria-expanded':'false',
+        'data-cad-snap-settings':'true',
+        onClick:()=>{
+          snapOptions.hidden=!snapOptions.hidden;
+          snapSettingsButton.setAttribute('aria-expanded',String(!snapOptions.hidden));
+        }
+      });
+      snapControls.appendChild(snapSettingsButton);
+      this.cadToolsPanel.appendChild(snapControls);
       const snapOptions=Utils.createElement('div',{className:'prt-cad-vertex-editor prt-cad-snap-options'});
-      snapOptions.appendChild(Utils.createElement('strong',{textContent:'Snap targets'}));
+      snapOptions.hidden=true;
+      snapOptions.appendChild(Utils.createElement('strong',{textContent:'Snapping types'}));
       [['vertices','Vertices'],['edges','Edges'],['intersections','Intersections'],['grid','Grid']].forEach(([mode,label])=>{
         const button=Utils.createElement('button',{
           className:'prt-btn prt-btn-outline prt-btn-sm',
           textContent:label,
           'data-cad-snap-mode':mode,
+          'aria-pressed':String(!!this.snapModes[mode]),
           onClick:()=>{
             this.snapModes[mode]=!this.snapModes[mode];
             this._updateCADPanel();
@@ -1190,21 +1265,8 @@
         this.snapModeButtons[mode]=button;
         snapOptions.appendChild(button);
       });
-      this.snapGridInput=Utils.createElement('input',{
-        className:'prt-input prt-cad-wide',
-        type:'number',min:'0.01',step:'0.1',value:String(this.snapGridMeters),
-        placeholder:'Grid spacing (m)',
-        'aria-label':'Grid spacing in meters'
-      });
-      this.snapGridInput.addEventListener('change',()=>{
-        const value=Number(this.snapGridInput.value);
-        if(!Number.isFinite(value)||value<=0) {
-          this.snapGridInput.value=String(this.snapGridMeters);
-          return Utils.showToast('Grid spacing must be greater than zero');
-        }
-        this.snapGridMeters=value;
-      });
-      snapOptions.appendChild(this.snapGridInput);
+      const toleranceControl=Utils.createElement('label',{className:'prt-cad-wide',style:{display:'grid',gap:'4px',fontSize:'12px',color:'#475569'}});
+      toleranceControl.appendChild(Utils.createElement('span',{textContent:'Snapping tolerance (screen pixels)'}));
       this.snapToleranceInput=Utils.createElement('input',{
         className:'prt-input prt-cad-wide',
         type:'number',min:'4',max:'80',step:'1',value:String(this.snapTolerance),
@@ -1219,34 +1281,14 @@
         }
         this.snapTolerance=value;
       });
-      snapOptions.appendChild(this.snapToleranceInput);
+      toleranceControl.appendChild(this.snapToleranceInput);
+      snapOptions.appendChild(toleranceControl);
       this.cadToolsPanel.appendChild(snapOptions);
       this.cadToolsPanel.appendChild(Utils.createElement('button',{
-        className:'prt-btn prt-btn-outline prt-btn-sm',
-        textContent:'Lock boundary movement',
+        className:'prt-btn prt-btn-outline prt-btn-sm prt-cad-lock',
+        textContent:'Lock all layer movement',
         'data-cad-lock':'true',
         onClick:()=>this._toggleCADBoundaryLock()
-      }));
-      this.cadToolsPanel.appendChild(Utils.createElement('button',{
-        className:'prt-btn prt-btn-outline prt-btn-sm',
-        textContent:'Undo last point',
-        'data-cad-undo-point':'true',
-        onClick:()=>this._undoLastSketchPoint()
-      }));
-      this.cadToolsPanel.appendChild(Utils.createElement('button',{
-        className:'prt-btn prt-btn-outline prt-btn-sm',
-        textContent:'Validate sketch',
-        onClick:()=>this._validateSketch()
-      }));
-      this.cadToolsPanel.appendChild(Utils.createElement('button',{
-        className:'prt-btn prt-btn-outline prt-btn-sm',
-        textContent:'Undo',
-        onClick:()=>this._undo()
-      }));
-      this.cadToolsPanel.appendChild(Utils.createElement('button',{
-        className:'prt-btn prt-btn-outline prt-btn-sm',
-        textContent:'Redo',
-        onClick:()=>this._redo()
       }));
       this.cadToolsPanel.appendChild(Utils.createElement('button',{
         className:'prt-btn prt-btn-outline prt-btn-sm',
@@ -1254,24 +1296,6 @@
         'data-cad-triangulate':'true',
         onClick:()=>this._triangulateSketch()
       }));
-      const dimensionBox=Utils.createElement('div',{className:'prt-cad-dimensions'});
-      dimensionBox.appendChild(Utils.createElement('strong',{textContent:'Edge dimensions',style:{fontSize:'12px',color:'#374151'}}));
-      this.cadEdgeSelect=Utils.createElement('select',{className:'prt-select',style:{width:'100%',padding:'6px',fontSize:'12px'},'aria-label':'Select polygon edge'});
-      this.cadEdgeSelect.addEventListener('change',()=>this._refreshCADDimensions());
-      this.cadDimensionLabel=Utils.createElement('input',{className:'prt-input',type:'text',placeholder:'Displayed text only','aria-label':'Dimension label text'});
-      this.cadDimensionLength=Utils.createElement('input',{className:'prt-input',type:'number',min:'0.001',step:'0.01',placeholder:'New length (m)','aria-label':'New edge length in meters'});
-      dimensionBox.append(this.cadEdgeSelect,this.cadDimensionLabel,this.cadDimensionLength);
-      dimensionBox.appendChild(Utils.createElement('button',{
-        className:'prt-btn prt-btn-primary prt-btn-sm',
-        textContent:'Change text only',
-        onClick:()=>this._applyDimensionLabel()
-      }));
-      dimensionBox.appendChild(Utils.createElement('button',{
-        className:'prt-btn prt-btn-outline prt-btn-sm',
-        textContent:'Apply length to sketch',
-        onClick:()=>this._applyDimensionLength()
-      }));
-      this.cadToolsPanel.appendChild(dimensionBox);
       const vertexEditor=Utils.createElement('div',{className:'prt-cad-vertex-editor'});
       vertexEditor.appendChild(Utils.createElement('strong',{textContent:'Vertex tools'}));
       this.vertexSelect=Utils.createElement('select',{
@@ -1348,6 +1372,24 @@
         'aria-label':'Finish sketch drawing'
       },[
         Utils.createElement('button',{
+          className:'prt-sketch-draft-action prt-sketch-draft-undo',
+          type:'button',
+          textContent:'↶',
+          title:'Undo last point',
+          'aria-label':'Undo last point',
+          'data-sketch-draft-undo':'true',
+          onClick:()=>this._undoLastSketchPoint()
+        }),
+        Utils.createElement('button',{
+          className:'prt-sketch-draft-action prt-sketch-draft-redo',
+          type:'button',
+          textContent:'↷',
+          title:'Redo last point',
+          'aria-label':'Redo last point',
+          'data-sketch-draft-redo':'true',
+          onClick:()=>this._redoSketchPoint()
+        }),
+        Utils.createElement('button',{
           className:'prt-sketch-draft-action prt-sketch-draft-cancel',
           type:'button',
           textContent:'×',
@@ -1368,6 +1410,45 @@
         })
       ]);
       workspace.appendChild(this.cadDraftActions);
+      this.dimensionEditor=Utils.createElement('div',{
+        className:'prt-dimension-editor',
+        hidden:true,
+        'aria-label':'Edit dimension text'
+      });
+      this.dimensionEditorInput=Utils.createElement('input',{
+        type:'text',
+        'aria-label':'Dimension text',
+        placeholder:'Dimension text'
+      });
+      this.dimensionEditorInput.addEventListener('keydown',event=>{
+        if(event.key==='Enter'){event.preventDefault();this._saveDimensionEdit();}
+        if(event.key==='Escape'){event.preventDefault();this._cancelDimensionEdit();}
+      });
+      this.dimensionEditor.append(
+        this.dimensionEditorInput,
+        Utils.createElement('button',{
+          className:'prt-dimension-editor-cancel',
+          type:'button',textContent:'×',title:'Cancel',
+          'aria-label':'Cancel dimension edit',
+          onClick:()=>this._cancelDimensionEdit()
+        }),
+        Utils.createElement('button',{
+          className:'prt-dimension-editor-apply',
+          type:'button',textContent:'↔',title:'Apply this length to the sketch (unit-aware)',
+          'aria-label':'Apply dimension length to sketch',
+          onClick:()=>this._applyEditedDimensionLength()
+        }),
+        Utils.createElement('button',{
+          className:'prt-dimension-editor-save',
+          type:'button',textContent:'✓',title:'Save dimension text',
+          'aria-label':'Save dimension text',
+          onClick:()=>this._saveDimensionEdit()
+        })
+      );
+      this.dimensionEditor.querySelector('.prt-dimension-editor-cancel').style.background='var(--prt-danger)';
+      this.dimensionEditor.querySelector('.prt-dimension-editor-save').style.background='var(--prt-success)';
+      this.dimensionEditorApplyButton=this.dimensionEditor.querySelector('.prt-dimension-editor-apply');
+      workspace.appendChild(this.dimensionEditor);
     }
 
     _activateCADMode(mode) {
@@ -1403,29 +1484,31 @@
           this.sketchEditMode==='draw-point'?'Finish point':'Finish polygon';
       }
       if(this.cadDraftActions)this.cadDraftActions.hidden=!canFinishDraft;
+      const draftUndo=this.cadDraftActions?.querySelector('[data-sketch-draft-undo]');
+      const draftRedo=this.cadDraftActions?.querySelector('[data-sketch-draft-redo]');
+      if(draftUndo)draftUndo.disabled=!this.sketchDraft?.points?.length;
+      if(draftRedo)draftRedo.disabled=!this.sketchDraft?.redoPoints?.length;
       const snap=this.cadToolsPanel.querySelector('[data-cad-snap]');
       if (snap) {
-        snap.textContent=`Snap ${this.snapEnabled?'On':'Off'}`;
+        snap.setAttribute('aria-pressed',String(this.snapEnabled));
         snap.classList.toggle('prt-btn-primary',this.snapEnabled);
         snap.classList.toggle('prt-btn-outline',!this.snapEnabled);
       }
       Object.entries(this.snapModeButtons).forEach(([mode,button])=>{
         button.classList.toggle('prt-btn-primary',!!this.snapModes[mode]);
         button.classList.toggle('prt-btn-outline',!this.snapModes[mode]);
+        button.setAttribute('aria-pressed',String(!!this.snapModes[mode]));
       });
       const lock=this.cadToolsPanel.querySelector('[data-cad-lock]');
       if(lock) {
-        lock.textContent=this.selectedElement?.cadMoveLocked?'Unlock boundary movement':'Lock boundary movement';
-        lock.classList.toggle('prt-btn-primary',!!this.selectedElement?.cadMoveLocked);
-        lock.classList.toggle('prt-btn-outline',!this.selectedElement?.cadMoveLocked);
-        lock.disabled=this.selectedElement?.type!=='sketch';
+        lock.textContent=this.cadMovementLocked?'Unlock all layer movement':'Lock all layer movement';
+        lock.classList.toggle('prt-btn-primary',this.cadMovementLocked);
+        lock.classList.toggle('prt-btn-outline',!this.cadMovementLocked);
+        lock.setAttribute('aria-pressed',String(this.cadMovementLocked));
       }
-      const undoPoint=this.cadToolsPanel.querySelector('[data-cad-undo-point]');
-      if(undoPoint)undoPoint.disabled=!this.sketchDraft?.points?.length;
       const triangulate=this.cadToolsPanel.querySelector('[data-cad-triangulate]');
       if(triangulate)triangulate.textContent=(this.selectedElement?.polygonsRef||[]).some(poly=>poly.triangulationDiagonals?.length)?'Remove diagonals':'Triangulate polygons';
       this._refreshCADVertexList();
-      this._refreshCADDimensions();
     }
 
     _refreshCADVertexList() {
@@ -1557,20 +1640,25 @@
     }
 
     _toggleCADBoundaryLock() {
-      const el=this.selectedElement;
-      if(el?.type!=='sketch')return Utils.showToast('Select a sketch element first');
-      el.cadMoveLocked=!el.cadMoveLocked;
+      this.cadMovementLocked=!this.cadMovementLocked;
       this._updateCADPanel();
-      this._commitHistory('cad-boundary-lock');
-      Utils.showToast(el.cadMoveLocked?'Sketch movement locked':'Sketch movement unlocked');
+      Utils.showToast(this.cadMovementLocked?'Movement locked for all report layers':'Movement unlocked for all report layers');
     }
 
     _undoLastSketchPoint() {
       if(!this.sketchDraft?.points?.length)return;
       const draft=this.sketchDraft;
-      draft.points.pop();
-      if(!draft.points.length)this.sketchDraft=null;
+      if(!Array.isArray(draft.redoPoints))draft.redoPoints=[];
+      draft.redoPoints.push(draft.points.pop());
       this._cadTouchPreview=null;
+      this._renderElement(draft.element);
+      this._updateCADPanel();
+    }
+
+    _redoSketchPoint() {
+      const draft=this.sketchDraft;
+      if(!draft?.redoPoints?.length)return;
+      draft.points.push(draft.redoPoints.pop());
       this._renderElement(draft.element);
       this._updateCADPanel();
     }
@@ -1656,65 +1744,57 @@
       return segments;
     }
 
-    _refreshCADDimensions() {
-      if (!this.cadEdgeSelect) return;
-      const el=this.selectedElement?.type==='sketch'?this.selectedElement:null;
-      const segments=this._getDimensionSegments(el);
-      const signature=`${el?.id||''}|${segments.map(segment=>segment.key).join(',')}`;
-      if (signature!==this.cadEdgeSignature) {
-        this.cadEdgeSignature=signature;
-        this.cadEdgeSelect.innerHTML='';
-        segments.forEach((segment,index)=>{
-          this.cadEdgeSelect.appendChild(Utils.createElement('option',{
-            value:segment.key,
-            textContent:`Plot ${segment.polygonIndex+1} · Edge ${segment.index+1} (${UNITS.formatLength(segment.length,'m')})`
-          }));
-          if(index===0)this.cadEdgeSelect.value=segment.key;
-        });
-      } else {
-        segments.forEach(segment=>{
-          const option=this.cadEdgeSelect.querySelector(`option[value="${segment.key}"]`);
-          if(option)option.textContent=`Plot ${segment.polygonIndex+1} · Edge ${segment.index+1} (${UNITS.formatLength(segment.length,'m')})`;
-        });
-      }
-      const active=segments.find(segment=>segment.key===this.cadEdgeSelect.value)||segments[0];
-      const disabled=!active;
-      this.cadEdgeSelect.disabled=disabled;
-      this.cadDimensionLabel.disabled=disabled;
-      this.cadDimensionLength.disabled=disabled;
-      if (!active) {
-        this.cadDimensionLabel.value='';
-        this.cadDimensionLength.value='';
-        return;
-      }
-      const label=active.poly.dimensionLabels?.[active.key];
-      if (document.activeElement!==this.cadDimensionLabel) this.cadDimensionLabel.value=label||'';
-      if (document.activeElement!==this.cadDimensionLength) this.cadDimensionLength.value=active.length.toFixed(2);
+    _openDimensionEditor(key,polygonIndex,label) {
+      const el=this.selectedElement;
+      if(el?.type!=='sketch'||!this.dimensionEditor)return;
+      const poly=el.polygonsRef?.[polygonIndex];
+      if(!poly)return;
+      this.dimensionEdit={element:el,key,polygonIndex};
+      this.dimensionEditorInput.value=label;
+      const isEdge=this._getDimensionSegments(el).some(segment=>segment.key===key);
+      this.dimensionEditorApplyButton.disabled=!isEdge;
+      this.dimensionEditorApplyButton.title=isEdge
+        ?'Apply the numeric value as a length to the sketch'
+        :'Length can only be applied to a polygon edge';
+      this.dimensionEditor.hidden=false;
+      this.dimensionEditorInput.focus();
+      this.dimensionEditorInput.select();
     }
 
-    _applyDimensionLabel() {
-      const el=this.selectedElement;
-      const segment=this._getDimensionSegments(el).find(item=>item.key===this.cadEdgeSelect?.value);
-      if (!segment) return Utils.showToast('Select a sketch and polygon edge first');
-      if (!segment.poly.dimensionLabels) segment.poly.dimensionLabels={};
-      const label=this.cadDimensionLabel.value.trim();
-      if(label)segment.poly.dimensionLabels[segment.key]=label;
-      else delete segment.poly.dimensionLabels[segment.key];
+    _cancelDimensionEdit() {
+      if(this.dimensionEditor)this.dimensionEditor.hidden=true;
+      this.dimensionEdit=null;
+    }
+
+    _saveDimensionEdit() {
+      const edit=this.dimensionEdit,el=edit?.element;
+      const poly=el?.polygonsRef?.[edit.polygonIndex];
+      if(!poly)return this._cancelDimensionEdit();
+      const label=this.dimensionEditorInput.value.trim();
+      if(!poly.dimensionLabels)poly.dimensionLabels={};
+      if(label)poly.dimensionLabels[edit.key]=label;
+      else delete poly.dimensionLabels[edit.key];
       this._regenSketch(el);
       this._commitHistory('dimension-label');
-      Utils.showToast(label?'Dimension text updated':'Dimension text reset to measured length');
+      this._cancelDimensionEdit();
     }
 
-    _applyDimensionLength() {
-      const el=this.selectedElement;
-      const segment=this._getDimensionSegments(el).find(item=>item.key===this.cadEdgeSelect?.value);
-      const target=Number(this.cadDimensionLength.value);
-      if(!segment) return Utils.showToast('Select a sketch and polygon edge first');
-      if(!Number.isFinite(target)||target<=0) return Utils.showToast('Enter a length greater than zero meters');
-      if(segment.length<1e-8) return Utils.showToast('Cannot resize a zero-length edge');
-      const ring=segment.ring, closed=ring.length>3&&ring[0][0]===ring[ring.length-1][0]&&ring[0][1]===ring[ring.length-1][1];
-      const count=ring.length-(closed?1:0), endIndex=(segment.index+1)%count;
-      const start=segment.a, end=segment.b;
+    _applyEditedDimensionLength() {
+      const edit=this.dimensionEdit,el=edit?.element;
+      if(!el||this.dimensionEditorApplyButton.disabled)return;
+      const input=this.dimensionEditorInput.value.trim().replace(/,/g,'');
+      const parsed=input.match(/^([+-]?(?:\d+\.?\d*|\.\d+))\s*(km|m|cm|mm|ft|feet|yd|mi)?$/i);
+      if(!parsed)return Utils.showToast('Enter a numeric length with an optional unit (m, km, ft, yd, mi)');
+      const factors={km:1000,m:1,cm:0.01,mm:0.001,ft:0.3048,feet:0.3048,yd:0.9144,mi:1609.344};
+      const target=Number(parsed[1])*(factors[(parsed[2]||'m').toLowerCase()]||1);
+      if(!Number.isFinite(target)||target<=0)return Utils.showToast('Enter a length greater than zero');
+      const segment=this._getDimensionSegments(el).find(item=>item.key===edit.key);
+      if(!segment)return Utils.showToast('Only polygon edge dimensions can change sketch geometry');
+      if(segment.length<1e-8)return Utils.showToast('Cannot resize a zero-length edge');
+      const ring=segment.ring;
+      const closed=ring.length>3&&ring[0][0]===ring[ring.length-1][0]&&ring[0][1]===ring[ring.length-1][1];
+      const count=ring.length-(closed?1:0),endIndex=(segment.index+1)%count;
+      const start=segment.a,end=segment.b;
       const coordinateLength=Math.hypot(end[0]-start[0],end[1]-start[1]);
       const targetCoordinateLength=Projection.coordinateDistance(target,start);
       const factor=targetCoordinateLength/coordinateLength;
@@ -1724,8 +1804,8 @@
       if(segment.poly.dimensionLabels)delete segment.poly.dimensionLabels[segment.key];
       delete segment.poly.triangulationDiagonals;
       this._syncSketchCoordinates(segment.poly,segment.ringIndex);
+      this._cancelDimensionEdit();
       this._commitGeometryChange(el,'dimension-length');
-      this._refreshCADDimensions();
       Utils.showToast(`Edge changed to ${UNITS.formatLength(target,'m')}`);
     }
 
@@ -1745,15 +1825,18 @@
       for(const poly of polygons){
         if(poly.geometryType==='LineString'||poly.geometryType==='Point')continue;
         const rings=poly.coordsProj||poly.coords||[];
-        if(rings.length!==1){skipped++;continue;}
-        const ring=rings[0],closed=ring.length>3&&ring[0][0]===ring[ring.length-1][0]&&ring[0][1]===ring[ring.length-1][1];
-        const points=ring.slice(0,ring.length-(closed?1:0));
-        const diagonals=this._triangulateRing(points);
-        if(!diagonals){skipped++;continue;}
+        const diagonals=[];
+        rings.forEach(ring=>{
+          const closed=ring.length>3&&ring[0][0]===ring[ring.length-1][0]&&ring[0][1]===ring[ring.length-1][1];
+          const points=ring.slice(0,ring.length-(closed?1:0));
+          const ringDiagonals=this._triangulateRing(points);
+          if(ringDiagonals)diagonals.push(...ringDiagonals);
+        });
+        if(!diagonals.length){skipped++;continue;}
         poly.triangulationDiagonals=diagonals;
         triangulated++;
       }
-      if(!triangulated)return Utils.showToast('No simple polygons could be triangulated (polygons with holes are skipped)');
+      if(!triangulated)return Utils.showToast('No polygon triangles could be drawn');
       this._regenSketch(el);
       this._commitHistory('triangulate');
       this._updateCADPanel();
@@ -1765,33 +1848,34 @@
       const cross=(a,b,c)=>(b[0]-a[0])*(c[1]-a[1])-(b[1]-a[1])*(c[0]-a[0]);
       let area=0;
       points.forEach((point,index)=>{const next=points[(index+1)%points.length];area+=point[0]*next[1]-next[0]*point[1];});
-      if(Math.abs(area)<1e-10)return null;
-      const orientation=area>0?1:-1,vertices=points.map((_,index)=>index),triangles=[];
-      const diagonalDegree=new Map();
+      const orientation=area>=0?1:-1,vertices=points.map((_,index)=>index),triangles=[];
       const inside=(p,a,b,c)=>{
         const e=1e-9;
         return cross(a,b,p)*orientation>=-e&&cross(b,c,p)*orientation>=-e&&cross(c,a,p)*orientation>=-e;
       };
       let guard=vertices.length*vertices.length;
       while(vertices.length>3&&guard-->0){
-        let bestEar=null;
+        let bestEar=null,bestFallback=null;
         for(let i=0;i<vertices.length;i++){
           const prev=vertices[(i+vertices.length-1)%vertices.length],curr=vertices[i],next=vertices[(i+1)%vertices.length];
-          const triangleArea=cross(points[prev],points[curr],points[next])*orientation;
+          const signedArea=cross(points[prev],points[curr],points[next]);
+          const triangleArea=signedArea*orientation;
+          if(Math.abs(signedArea)>1e-10&&(!bestFallback||Math.abs(signedArea)>bestFallback.area)) {
+            bestFallback={position:i,prev,curr,next,area:Math.abs(signedArea)};
+          }
           if(triangleArea<=1e-10)continue;
           if(vertices.some(index=>index!==prev&&index!==curr&&index!==next&&inside(points[index],points[prev],points[curr],points[next])))continue;
-          const degree=(diagonalDegree.get(prev)||0)+(diagonalDegree.get(next)||0);
-          const score=triangleArea/(1+degree*0.35);
-          if(!bestEar||score>bestEar.score)bestEar={position:i,prev,curr,next,score};
+          if(!bestEar||triangleArea>bestEar.area)bestEar={position:i,prev,curr,next,area:triangleArea};
         }
-        if(!bestEar)return null;
-        triangles.push([bestEar.prev,bestEar.curr,bestEar.next]);
-        diagonalDegree.set(bestEar.prev,(diagonalDegree.get(bestEar.prev)||0)+1);
-        diagonalDegree.set(bestEar.next,(diagonalDegree.get(bestEar.next)||0)+1);
-        vertices.splice(bestEar.position,1);
+        const triangle=bestEar||bestFallback;
+        if(!triangle)break;
+        triangles.push([triangle.prev,triangle.curr,triangle.next]);
+        vertices.splice(triangle.position,1);
       }
-      if(vertices.length!==3)return null;
-      triangles.push(vertices.slice());
+      if(vertices.length===3&&Math.abs(cross(points[vertices[0]],points[vertices[1]],points[vertices[2]]))>1e-10) {
+        triangles.push(vertices.slice());
+      }
+      if(!triangles.length)return null;
       const boundary=new Set(points.map((_,index)=>`${Math.min(index,(index+1)%points.length)}:${Math.max(index,(index+1)%points.length)}`));
       const diagonalMap=new Map();
       triangles.forEach(triangle=>{
@@ -2094,6 +2178,7 @@
     }
 
     _selectElement(el) {
+      if(this.dimensionEdit?.element?.id!==el?.id)this._cancelDimensionEdit();
       if(this.selectedElement?.id!==el?.id)this.selectedVertex=null;
       if (this.vertexEditElementId && el?.id !== this.vertexEditElementId) {
         this.canvas.querySelectorAll(`[data-el-id="${this.vertexEditElementId}"] .prt-sketch-edit-handle`).forEach(handle => handle.remove());
@@ -2255,7 +2340,8 @@
               'aria-label':`Label for plot ${polygonIndex+1}`
             });
             input.addEventListener('input',()=>{
-              poly.label=input.value;
+              if(input.value.trim())poly.label=input.value;
+              else delete poly.label;
               this._regenSketch(el);
             });
             input.addEventListener('change',()=>this._commitHistory('plot-label'));
@@ -2799,7 +2885,7 @@
     _handlePointerDown(pos, e) {
       if(this._pinchActive)return;
       const s = this.scale;
-      if (this.selectedElement?.type === 'sketch' && !this.selectedElement.locked) {
+      if (this.selectedElement?.type === 'sketch' && !this.selectedElement.locked && !this.cadMovementLocked) {
         const el = this.selectedElement;
         if(this.sketchEditMode==='delete-feature') {
           const target=e.target?.closest?.('.prt-canvas-element');
@@ -2830,7 +2916,7 @@
           this._deleteSketchDimension(el,Number(dimensionHandle.dataset.prtPolygon),dimensionHandle.dataset.prtDimensionKey);
           return;
         }
-        if(dimensionHandle&&!['draw-dimension','draw-polygon','draw-line','draw-point','add-vertex'].includes(this.sketchEditMode)) {
+        if(dimensionHandle&&this.sketchEditMode==='edit-dimensions') {
           e.preventDefault();
           const local=this._elementLocalFromCanvasPos(el,pos);
           const poly=(el.polygonsRef||[])[Number(dimensionHandle.dataset.prtPolygon)];
@@ -2882,7 +2968,7 @@
             if (this.sketchEditMode === 'add-vertex') {
               this._addSketchVertex(el, snapped);
             } else if (this.sketchEditMode === 'draw-point') {
-              this.sketchDraft={element:el,points:[snapped]};
+              this.sketchDraft={element:el,points:[snapped],redoPoints:[]};
               this._renderElement(el);
               this._updateCADPanel();
             } else if(this.sketchEditMode==='draw-dimension') {
@@ -2890,8 +2976,9 @@
               else this._addManualSketchDimension(el,this.sketchDraft.points[0],snapped);
               this._renderElement(el);
             } else {
-              if (!this.sketchDraft) this.sketchDraft = { element:el, points:[] };
+              if (!this.sketchDraft) this.sketchDraft = { element:el, points:[],redoPoints:[] };
               this.sketchDraft.points.push(snapped);
+              this.sketchDraft.redoPoints=[];
               this._renderElement(el);
               Utils.showToast(`${this.sketchEditMode==='draw-line'?'Line':'Polygon'} point ${this.sketchDraft.points.length} added; double-click to finish`);
               this._updateCADPanel();
@@ -2903,7 +2990,7 @@
       if(this.selectedElement?.type==='sketch'&&this.sketchEditMode)return;
       if (this.selectedElement) {
         const rotHandle = e.target?.closest?.('[data-rotate-drag="true"]');
-        if (rotHandle) {
+        if (rotHandle&&!this.cadMovementLocked) {
           const rect = this.canvas.getBoundingClientRect();
           const cx = rect.left + (this.selectedElement.x + this.selectedElement.width/2)*s;
           const cy = rect.top + (this.selectedElement.y + this.selectedElement.height/2)*s;
@@ -2911,7 +2998,7 @@
           return;
         }
         const handle = e.target?.closest?.('.prt-resize-handle');
-        if (handle) {
+        if (handle&&!this.cadMovementLocked) {
           this.dragState = { type:'resize', handle:handle.dataset.handle, element:this.selectedElement, startX:pos.x, startY:pos.y, origX:this.selectedElement.x, origY:this.selectedElement.y, origW:this.selectedElement.width, origH:this.selectedElement.height };
           return;
         }
@@ -2921,7 +3008,7 @@
         const el = this.elements.find(x => x.id === elDom.dataset.elId);
         if (el && !el.locked) {
           this._selectElement(el);
-          if(el.type!=='sketch'||!el.cadMoveLocked) {
+          if(!this.cadMovementLocked) {
             this.dragState = { type:'move', element:el, startX:pos.x, startY:pos.y, origX:el.x, origY:el.y };
           }
           return;
@@ -3078,8 +3165,8 @@
       const renderer = new SketchRenderer();
       const options={
         ...(el.sketchOptions||{}),
-        handleHitRadius:28/this.scale,
-        handleVisibleRadius:7/this.scale,
+        handleHitRadius:Math.max(28,this.gripSize*4)/this.scale,
+        handleVisibleRadius:this.gripSize/this.scale,
         showDimensionNodes:this.sketchEditMode==='edit-dimensions'&&this.selectedElement?.id===el.id
       };
       el.svgContent = renderer.render(el.polygonsRef, el.width, el.height, options);
@@ -3088,6 +3175,7 @@
 
     _setSketchEditMode(mode, el) {
       if (mode && (!el || el.type !== 'sketch')) return;
+      this._cancelDimensionEdit();
       const propertiesWasExpanded=this.propsExpanded;
       if(this._cadTouchDrawing)clearTimeout(this._cadTouchDrawing.timer);
       this._cadTouchDrawing=null;
@@ -3176,7 +3264,7 @@
             marker.setAttribute('cy', String(y));
             const selected=this.selectedVertex?.polygonIndex===polygonIndex&&
               this.selectedVertex?.ringIndex===ringIndex&&this.selectedVertex?.vertexIndex===vertexIndex;
-            marker.setAttribute('r', String((selected?10:7)/this.scale));
+            marker.setAttribute('r', String((selected?this.gripSize+3:this.gripSize)/this.scale));
             marker.setAttribute('class', 'prt-sketch-edit-handle');
             if(selected)marker.setAttribute('fill','#dc2626');
             marker.setAttribute('pointer-events','none');
@@ -3196,7 +3284,7 @@
       const [x,y]=this._sketchCoordinateToLocal(coordinate,transform);
       const marker=document.createElementNS('http://www.w3.org/2000/svg','circle');
       marker.setAttribute('cx',String(x));marker.setAttribute('cy',String(y));
-      marker.setAttribute('r',String(12/this.scale));
+      marker.setAttribute('r',String((this.gripSize+5)/this.scale));
       marker.setAttribute('fill','rgba(220,38,38,.22)');
       marker.setAttribute('stroke','#dc2626');
       marker.setAttribute('stroke-width',String(2/this.scale));
@@ -3513,6 +3601,27 @@
                         vertexSize:2.4, vertexShape:'circle' }
       });
       this._selectElement(el); this._commitHistory('add-sketch');
+    }
+
+    _addPageBorder() {
+      const pW=Utils.mm2px(this.pageDims.w),pH=Utils.mm2px(this.pageDims.h);
+      const el=this._addElement({
+        type:'rect',name:'Border',x:10,y:10,width:pW-20,height:pH-20,
+        strokeColor:'#111827',strokeWidth:2,fillColor:'transparent'
+      });
+      this._selectElement(el);
+      this._commitHistory('add-border');
+    }
+
+    _addPageDivider() {
+      const pW=Utils.mm2px(this.pageDims.w),pH=Utils.mm2px(this.pageDims.h);
+      const width=pW-40;
+      const el=this._addElement({
+        type:'line',name:'Divider',x:20,y:pH/2-2,width,height:4,
+        lineDX:width,lineDY:0,strokeColor:'#cbd5e1',strokeWidth:2,rotation:0
+      });
+      this._selectElement(el);
+      this._commitHistory('add-divider');
     }
 
     // ---------- QR Modal ----------
@@ -4139,6 +4248,7 @@
   class MapSelector {
     constructor(tool) {
       this.tool = tool; this.map = null; this.selectedFeatures = []; this.sourceLayer = null;
+      this.isActive=false;
       this.selectionLayer = null; this.highlightSource = null;
       this.bar = null; this.countEl = null;
       this.boxMode = false; this.dragBox = null; this._dragPanInteraction = null;
@@ -4146,19 +4256,24 @@
       this._popupFlags = null; this._popupMapHandler = null;
     }
     start(layerName) {
+      if(this.isActive)this.stop();
       this.map = this._findMap();
-      if (!this.map) { Utils.showToast('Could not find OpenLayers map'); return; }
+      if (!this.map) { Utils.showToast('Could not find OpenLayers map'); return false; }
       this.sourceLayer = this._findLayer(layerName);
-      if (!this.sourceLayer) { Utils.showToast(`Layer "${layerName}" not found`); return; }
+      if (!this.sourceLayer) { Utils.showToast(`Layer "${layerName}" not found`); return false; }
       this.selectedFeatures = [];
+      this.boxMode=false;
+      this.isActive=true;
       this._suppressPopups(true);
       this._installBackButtonHandler();
       this._createHighlightLayer();
       this._createClickSelect();
       this._createDragBoxSelect();
       this._showSelectionBar();
+      return true;
     }
     stop() {
+      this.isActive=false;
       this._removeClickSelect();
       this._removeDragBoxSelect();
       this._removeHighlightLayer();
@@ -4361,8 +4476,9 @@
     }
     _hideSelectionBar() {
       if (!this.bar) return;
-      this.bar.classList.remove('visible');
-      setTimeout(() => this.bar?.remove(), 300);
+      const bar=this.bar;
+      bar.classList.remove('visible');
+      setTimeout(() => bar.remove(), 300);
       this.bar = null;
     }
     _updateCount() { if (this.countEl) this.countEl.textContent = `${this.selectedFeatures.length} selected`; }
@@ -4443,7 +4559,14 @@
       this._createMainButton();
     }
     _createMainButton() {
-      this.mainBtn = Utils.createElement('button', { className:'prt-main-btn', innerHTML:ICONS.plot, title:'Plot Report Tool', onClick:() => this.showPanel('initial') });
+      this.mainBtn = Utils.createElement('button', { className:'prt-main-btn', innerHTML:ICONS.plot, title:'Plot Report Tool', onClick:() => {
+        if(this.mapSelector.isActive) {
+          this.mapSelector.stop();
+          this.showPanel('initial');
+          return;
+        }
+        this.showPanel('initial');
+      } });
       document.body.appendChild(this.mainBtn);
     }
     showPanel(state) {
@@ -4490,8 +4613,7 @@
         const layerName = layerSelect.value;
         if (!layerName) return Utils.showToast('Select a layer first');
         this.selectedLayer = layerName;
-        this._hidePanel();
-        this.mapSelector.start(layerName);
+        if(this.mapSelector.start(layerName))this._hidePanel();
       } }));
       this.panel.appendChild(body);
     }
