@@ -174,7 +174,7 @@
   .prt-line-element svg,.prt-sketch-element svg{width:100%;height:100%;overflow:visible}
   .prt-sketch-edit-handle{fill:#f59e0b;stroke:#fff;stroke-width:1.5;cursor:grab;pointer-events:all}
   .prt-sketch-edit-handle:active{cursor:grabbing}
-  .prt-sketch-edit-hit{fill:transparent;stroke:transparent;pointer-events:all;touch-action:none}
+  .prt-sketch-edit-hit{fill:transparent;stroke:transparent;pointer-events:all;touch-action:none;-webkit-tap-highlight-color:transparent}
   [data-prt-dimension-key]{cursor:grab}
   [data-prt-dimension-key]:active{cursor:grabbing}
   .prt-rect-element{width:100%;height:100%;box-sizing:border-box}
@@ -675,7 +675,9 @@
           const areaM2 = Projection.polygonAreaM2(ringsProj[0]);
 
           let labelLines = [];
-          if (options.labelFields && options.labelFields.length) {
+          if (poly.label != null) {
+            labelLines.push(String(poly.label));
+          } else if (options.labelFields && options.labelFields.length) {
             options.labelFields.forEach(f => {
               if (f === '__area__') {
                 labelLines.push(UNITS.formatArea(areaM2, options.areaUnit));
@@ -855,6 +857,8 @@
       this.vertexEditElementId = null;
       this.sketchDraft = null;
       this._touchInteractionActive = false;
+      this._cadTouchDrawing = null;
+      this._cadTouchPreview = null;
       this.snapEnabled = true;
       this._regenTimers = new WeakMap();
       this.cadToggleBtn = null; this.cadToolsPanel = null; this.cadDraftActions = null; this.propsRailBtn = null;
@@ -873,8 +877,8 @@
         docMouseMove: (e) => this._canvasMouseMove(e),
         docMouseUp: () => this._handlePointerUp(),
         docTouchMove: (e) => this._canvasTouchMove(e),
-        docTouchEnd: () => { this._handlePointerUp(); this._touchInteractionActive=false; },
-        docTouchCancel: () => { this._handlePointerUp(); this._touchInteractionActive=false; }
+        docTouchEnd: (e) => this._canvasTouchEnd(e),
+        docTouchCancel: () => this._cancelCanvasTouch()
       };
     }
 
@@ -942,6 +946,9 @@
     }
 
     close() {
+      if(this._cadTouchDrawing)clearTimeout(this._cadTouchDrawing.timer);
+      this._cadTouchDrawing=null;
+      this._cadTouchPreview=null;
       // Remove all document-level listeners (BUG FIX #1)
       document.removeEventListener('keydown', this._bound.key);
       document.removeEventListener('mousemove', this._bound.docMouseMove);
@@ -1844,6 +1851,34 @@
         }));
       });
 
+      const labelPolygons=(el.polygonsRef||[]).filter(poly=>poly.geometryType!=='LineString'&&poly.geometryType!=='Point');
+      if(labelPolygons.length) {
+        this._addPropsSection(body,'Sketch — Plot labels',(content)=>{
+          content.appendChild(Utils.createElement('p',{
+            textContent:'Edit the text shown inside each polygon.',
+            style:{margin:'0 0 8px',fontSize:'12px',color:'#64748b'}
+          }));
+          labelPolygons.forEach(poly=>{
+            const polygonIndex=(el.polygonsRef||[]).indexOf(poly);
+            const fallback=poly.properties?.name||poly.properties?.id||poly.properties?.OBJECTID||`Plot ${polygonIndex+1}`;
+            const row=Utils.createElement('div',{className:'prt-props-row'});
+            row.appendChild(Utils.createElement('label',{textContent:`Plot ${polygonIndex+1}`}));
+            const input=Utils.createElement('input',{
+              type:'text',
+              value:String(poly.label??fallback),
+              'aria-label':`Label for plot ${polygonIndex+1}`
+            });
+            input.addEventListener('input',()=>{
+              poly.label=input.value;
+              this._regenSketch(el);
+            });
+            input.addEventListener('change',()=>this._commitHistory('plot-label'));
+            row.appendChild(input);
+            content.appendChild(row);
+          });
+        });
+      }
+
       this._addPropsSection(body, 'Sketch — Vertices', (content) => {
         this._addSliderRow(content, 'Size', opts.vertexSize||2.4, 0.5, 10, 0.1, v => { opts.vertexSize = v; regen(); }, 'px');
         this._addSelectRow(content, 'Shape', opts.vertexShape||'circle', [['circle','Circle'],['square','Square'],['cross','Cross'],['triangle','Triangle']], v => { opts.vertexShape = v; regen(); });
@@ -2181,6 +2216,10 @@
       this._touchInteractionActive=!!e.target?.closest?.('.prt-page-canvas');
       if(this.sketchEditMode||this.activeTool)e.preventDefault();
       const pos=this._getCanvasPosTouch(e.touches[0]);
+      if (this._isCADPointPlacementMode() && e.target?.closest?.(`[data-el-id="${this.selectedElement?.id}"]`)) {
+        this._beginCADTouchDrawing(pos,e);
+        return;
+      }
       this._handlePointerDown(pos,e);
     }
     _canvasMouseMove(e) { const pos = this._getCanvasPos(e); this._handlePointerMove(pos, e); }
@@ -2190,7 +2229,67 @@
       if((!target&&!this._touchInteractionActive)||(!this.dragState&&!this.sketchEditMode&&!this.activeTool))return;
       e.preventDefault();
       const pos=this._getCanvasPosTouch(e.touches[0]);
+      if (this._cadTouchDrawing) {
+        this._cadTouchDrawing.currentPos=pos;
+        if (this._cadTouchDrawing.longPressed) this._updateCADTouchPreview(pos);
+        return;
+      }
       this._handlePointerMove(pos,e.touches[0]);
+    }
+
+    _isCADPointPlacementMode() {
+      return ['add-vertex','draw-line','draw-polygon','draw-point','draw-dimension'].includes(this.sketchEditMode);
+    }
+
+    _beginCADTouchDrawing(pos,e) {
+      const drawing={startPos:pos,currentPos:pos,startEvent:e,longPressed:false,timer:null};
+      drawing.timer=setTimeout(()=>{
+        if(this._cadTouchDrawing!==drawing)return;
+        drawing.longPressed=true;
+        this._updateCADTouchPreview(drawing.currentPos);
+      },350);
+      this._cadTouchDrawing=drawing;
+    }
+
+    _updateCADTouchPreview(pos) {
+      const el=this.selectedElement;
+      if(!el||el.type!=='sketch')return;
+      const projected=this._pageToSketchCoordinate(el,pos.x/this.scale,pos.y/this.scale);
+      if(!projected)return;
+      this._cadTouchPreview={
+        element:el,
+        coordinate:this.snapEnabled?this._snapSketchCoordinate(el,projected):projected
+      };
+      this._renderElement(el);
+    }
+
+    _canvasTouchEnd(e) {
+      const drawing=this._cadTouchDrawing;
+      if(drawing) {
+        clearTimeout(drawing.timer);
+        this._cadTouchDrawing=null;
+        this._cadTouchPreview=null;
+        if(drawing.longPressed) {
+          const touch=e.changedTouches?.[0];
+          const pos=touch?this._getCanvasPosTouch(touch):drawing.currentPos;
+          this._handlePointerDown(pos,drawing.startEvent);
+        } else {
+          this._handlePointerDown(drawing.startPos,drawing.startEvent);
+        }
+        if(this.selectedElement)this._renderElement(this.selectedElement);
+      }
+      this._handlePointerUp();
+      this._touchInteractionActive=false;
+    }
+
+    _cancelCanvasTouch() {
+      if(this._cadTouchDrawing)clearTimeout(this._cadTouchDrawing.timer);
+      this._cadTouchDrawing=null;
+      const previewElement=this._cadTouchPreview?.element;
+      this._cadTouchPreview=null;
+      if(previewElement)this._renderElement(previewElement);
+      this._handlePointerUp();
+      this._touchInteractionActive=false;
     }
 
     _handlePointerDown(pos, e) {
@@ -2241,7 +2340,9 @@
           };
           return;
         }
-        const vertexHandle = e.target?.closest?.('[data-prt-vertex]');
+        const vertexHandle = ['edit-vertices','delete-vertex'].includes(this.sketchEditMode)
+          ? this._findNearestSketchVertexHandle(el,pos) || e.target?.closest?.('[data-prt-vertex]')
+          : e.target?.closest?.('[data-prt-vertex]');
         if (vertexHandle && this.sketchEditMode === 'edit-vertices') {
           e.preventDefault();
           this.dragState = {
@@ -2288,6 +2389,7 @@
           }
         }
       }
+      if(this.selectedElement?.type==='sketch'&&this.sketchEditMode)return;
       if (this.selectedElement) {
         const rotHandle = e.target?.closest?.('[data-rotate-drag="true"]');
         if (rotHandle) {
@@ -2342,6 +2444,19 @@
           }
         }
       }
+    }
+
+    _findNearestSketchVertexHandle(el,pos) {
+      const wrapper=this.canvas.querySelector(`[data-el-id="${el.id}"]`);
+      const canvasRect=this.canvas.getBoundingClientRect();
+      const targetX=canvasRect.left+pos.x,targetY=canvasRect.top+pos.y;
+      let nearest=null,bestDistance=32;
+      wrapper?.querySelectorAll('.prt-sketch-edit-hit[data-prt-vertex]').forEach(handle=>{
+        const rect=handle.getBoundingClientRect();
+        const distance=Math.hypot(rect.left+rect.width/2-targetX,rect.top+rect.height/2-targetY);
+        if(distance<=bestDistance){bestDistance=distance;nearest=handle;}
+      });
+      return nearest;
     }
 
     _handlePointerMove(pos, e) {
@@ -2449,7 +2564,7 @@
       const renderer = new SketchRenderer();
       const options={
         ...(el.sketchOptions||{}),
-        handleHitRadius:20/this.scale,
+        handleHitRadius:28/this.scale,
         handleVisibleRadius:7/this.scale,
         showDimensionNodes:this.sketchEditMode==='edit-dimensions'&&this.selectedElement?.id===el.id
       };
@@ -2460,6 +2575,9 @@
     _setSketchEditMode(mode, el) {
       if (mode && (!el || el.type !== 'sketch')) return;
       const propertiesWasExpanded=this.propsExpanded;
+      if(this._cadTouchDrawing)clearTimeout(this._cadTouchDrawing.timer);
+      this._cadTouchDrawing=null;
+      this._cadTouchPreview=null;
       this.sketchEditMode = mode;
       this.canvas?.classList.toggle('cad-touch-active',!!mode);
       this.vertexEditElementId = ['edit-vertices','delete-vertex'].includes(mode) ? el.id : null;
@@ -2531,7 +2649,7 @@
             const hitTarget=document.createElementNS(ns,'circle');
             hitTarget.setAttribute('cx',String(x));
             hitTarget.setAttribute('cy',String(y));
-            hitTarget.setAttribute('r',String(20/this.scale));
+            hitTarget.setAttribute('r',String(28/this.scale));
             hitTarget.setAttribute('class','prt-sketch-edit-hit');
             hitTarget.setAttribute('data-prt-vertex','true');
             hitTarget.setAttribute('data-polygon',String(polygonIndex));
@@ -2552,9 +2670,13 @@
 
     _appendSketchDraft(svg, el) {
       const draft=this.sketchDraft, transform=this._getSketchTransform(el);
-      if (!draft || draft.element.id!==el.id || !transform || !draft.points.length) return;
+      const hasDraft=draft?.element.id===el.id;
+      const preview=this._cadTouchPreview?.element.id===el.id?this._cadTouchPreview.coordinate:null;
+      if ((!hasDraft&&!preview) || !transform || (!draft?.points.length&&!preview)) return;
       const ns='http://www.w3.org/2000/svg';
-      const points=draft.points.map(point=>this._sketchCoordinateToLocal(point,transform));
+      const points=(hasDraft?draft.points:[]).map(point=>this._sketchCoordinateToLocal(point,transform));
+      if(preview)points.push(this._sketchCoordinateToLocal(preview,transform));
+      if(!points.length)return;
       const path=document.createElementNS(ns,'path');
       const closed=this.sketchEditMode==='draw-polygon' && points.length>2;
       path.setAttribute('d',points.map((point,index)=>`${index?'L':'M'} ${point[0]} ${point[1]}`).join(' ')+(closed?' Z':''));
