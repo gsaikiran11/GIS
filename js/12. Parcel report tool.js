@@ -186,8 +186,11 @@
   .prt-props-panel.expanded{width:300px;flex-shrink:0}
   .prt-props-rail{position:absolute;z-index:9;right:0;top:50%;transform:translateY(-50%);width:28px;height:58px;border:1px solid var(--prt-gray-300);border-right:0;border-radius:10px 0 0 10px;background:#fff;color:var(--prt-gray-700);box-shadow:var(--prt-shadow);cursor:pointer;font-size:20px;line-height:1}
   .prt-props-rail:hover{background:var(--prt-primary-light);color:var(--prt-primary)}
-  .prt-cad-dock{position:absolute;z-index:7;bottom:10px;left:50%;transform:translateX(-50%);width:min(760px,calc(100% - 24px));background:#fff;border:1px solid var(--prt-gray-300);border-radius:14px;box-shadow:var(--prt-shadow-lg);overflow:hidden}
-  .prt-cad-dock-header{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 12px;background:linear-gradient(180deg,#fff,#f8fafc)}
+  .prt-cad-dock{position:absolute;z-index:10;bottom:10px;left:50%;transform:translateX(-50%);width:min(760px,calc(100% - 24px));background:#fff;border:1px solid var(--prt-gray-300);border-radius:14px;box-shadow:var(--prt-shadow-lg);overflow:hidden}
+  .prt-cad-dock-header{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 12px;background:linear-gradient(180deg,#fff,#f8fafc);cursor:grab;touch-action:none;user-select:none}
+  .prt-cad-dock-header.dragging{cursor:grabbing}
+  .prt-cad-dock-hint{margin-left:auto;color:var(--prt-gray-500);font-size:11px;font-weight:500;white-space:nowrap}
+  .prt-cad-dock-header .prt-toolbar-toggle{touch-action:manipulation}
   .prt-sketch-draft-actions{position:absolute;z-index:11;top:10px;left:50%;transform:translateX(-50%);display:flex;gap:10px;padding:6px;background:#fff;border:1px solid var(--prt-gray-300);border-radius:14px;box-shadow:var(--prt-shadow-lg)}
   .prt-sketch-draft-actions[hidden]{display:none}
   .prt-sketch-draft-action{display:flex;align-items:center;justify-content:center;width:42px;height:42px;border:0;border-radius:12px;color:#fff;font-size:24px;font-weight:700;line-height:1;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
@@ -1191,6 +1194,7 @@
       const dock=Utils.createElement('div',{className:'prt-cad-dock'});
       const header=Utils.createElement('div',{className:'prt-cad-dock-header'});
       header.appendChild(Utils.createElement('strong',{textContent:'CAD sketch editing',style:{fontSize:'12px',color:'#374151'}}));
+      header.appendChild(Utils.createElement('span',{className:'prt-cad-dock-hint',textContent:'Drag to move'}));
       this.cadToggleBtn=Utils.createElement('button',{
         className:'prt-toolbar-toggle',
         textContent:'CAD tools ▴',
@@ -1199,6 +1203,7 @@
       });
       header.appendChild(this.cadToggleBtn);
       dock.appendChild(header);
+      this._makeCADDockDraggable(dock,header);
       this.cadToolsPanel=Utils.createElement('div',{className:'prt-cad-tools collapsed'});
       const actions=[
         ['Select / Move','select'],
@@ -1449,6 +1454,57 @@
       this.dimensionEditor.querySelector('.prt-dimension-editor-save').style.background='var(--prt-success)';
       this.dimensionEditorApplyButton=this.dimensionEditor.querySelector('.prt-dimension-editor-apply');
       workspace.appendChild(this.dimensionEditor);
+    }
+
+    _makeCADDockDraggable(dock,header) {
+      let drag=null;
+      header.addEventListener('pointerdown',event=>{
+        if(event.button!==0||event.target.closest('button'))return;
+        const workspace=dock.parentElement;
+        if(!workspace)return;
+        const workspaceRect=workspace.getBoundingClientRect();
+        const dockRect=dock.getBoundingClientRect();
+        drag={
+          pointerId:event.pointerId,
+          startX:event.clientX,
+          startY:event.clientY,
+          left:dockRect.left-workspaceRect.left,
+          top:dockRect.top-workspaceRect.top,
+          width:dockRect.width,
+          height:dockRect.height,
+          workspaceWidth:workspaceRect.width,
+          workspaceHeight:workspaceRect.height
+        };
+        dock.style.left=`${drag.left}px`;
+        dock.style.top=`${drag.top}px`;
+        dock.style.right='auto';
+        dock.style.bottom='auto';
+        dock.style.transform='none';
+        header.classList.add('dragging');
+        header.setPointerCapture(event.pointerId);
+        event.preventDefault();
+      });
+      header.addEventListener('pointermove',event=>{
+        if(!drag||event.pointerId!==drag.pointerId)return;
+        const left=Math.max(0,Math.min(
+          drag.workspaceWidth-drag.width,
+          drag.left+event.clientX-drag.startX
+        ));
+        const top=Math.max(0,Math.min(
+          drag.workspaceHeight-drag.height,
+          drag.top+event.clientY-drag.startY
+        ));
+        dock.style.left=`${left}px`;
+        dock.style.top=`${top}px`;
+      });
+      const finishDrag=event=>{
+        if(!drag||event.pointerId!==drag.pointerId)return;
+        if(header.hasPointerCapture(event.pointerId))header.releasePointerCapture(event.pointerId);
+        drag=null;
+        header.classList.remove('dragging');
+      };
+      header.addEventListener('pointerup',finishDrag);
+      header.addEventListener('pointercancel',finishDrag);
     }
 
     _activateCADMode(mode) {
