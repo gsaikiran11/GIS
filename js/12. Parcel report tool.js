@@ -174,6 +174,7 @@
   .prt-line-element svg,.prt-sketch-element svg{width:100%;height:100%;overflow:visible}
   .prt-sketch-edit-handle{fill:#f59e0b;stroke:#fff;stroke-width:1.5;cursor:grab;pointer-events:all}
   .prt-sketch-edit-handle:active{cursor:grabbing}
+  .prt-sketch-edit-hit{fill:transparent;stroke:transparent;pointer-events:all;touch-action:none}
   [data-prt-dimension-key]{cursor:grab}
   [data-prt-dimension-key]:active{cursor:grabbing}
   .prt-rect-element{width:100%;height:100%;box-sizing:border-box}
@@ -186,6 +187,11 @@
   .prt-props-rail:hover{background:var(--prt-primary-light);color:var(--prt-primary)}
   .prt-cad-dock{position:absolute;z-index:7;bottom:10px;left:50%;transform:translateX(-50%);width:min(720px,calc(100% - 24px));background:#fff;border:1px solid var(--prt-gray-300);border-radius:12px;box-shadow:var(--prt-shadow-lg);overflow:hidden}
   .prt-cad-dock-header{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 10px;background:#fff}
+  .prt-sketch-draft-actions{position:absolute;z-index:11;top:10px;left:50%;transform:translateX(-50%);display:flex;gap:10px;padding:6px;background:#fff;border:1px solid var(--prt-gray-300);border-radius:14px;box-shadow:var(--prt-shadow-lg)}
+  .prt-sketch-draft-actions[hidden]{display:none}
+  .prt-sketch-draft-action{display:flex;align-items:center;justify-content:center;width:48px;height:48px;border:0;border-radius:12px;color:#fff;font-size:30px;font-weight:700;line-height:1;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+  .prt-sketch-draft-cancel{background:var(--prt-danger)}
+  .prt-sketch-draft-confirm{background:var(--prt-success)}
   .prt-cad-tools{display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:8px;border-top:1px solid var(--prt-gray-200);max-height:150px;overflow:auto}
   .prt-cad-dimensions{display:grid;grid-template-columns:minmax(140px,1.4fr) minmax(110px,1fr) minmax(110px,1fr) auto auto;align-items:center;gap:6px;flex:1 0 100%;min-width:0;padding-top:6px;border-top:1px solid var(--prt-gray-200)}
   .prt-cad-dimensions strong{grid-column:1/-1}
@@ -193,7 +199,30 @@
   .prt-cad-tools.collapsed{display:none}
   .prt-cad-tools .prt-btn.active{background:var(--prt-primary-light);color:var(--prt-primary);border-color:var(--prt-primary)}
   .prt-dimension-node{fill:#fff;stroke:#7c3aed;stroke-width:1.5;cursor:crosshair;pointer-events:all}
+  .prt-dimension-node-hit{fill:transparent;stroke:transparent;pointer-events:all;touch-action:none}
   .prt-dimension-node:hover{fill:#ddd6fe}
+  .prt-page-canvas.cad-touch-active{touch-action:none}
+  @media(max-width:768px){
+    .prt-cad-dock{bottom:4px;width:calc(100% - 12px);max-height:42dvh;display:flex;flex-direction:column}
+    .prt-cad-tools{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-content:start;gap:6px;padding:8px;max-height:36dvh;overflow-y:auto;overscroll-behavior:contain}
+    .prt-cad-tools .prt-btn{min-height:46px;padding:8px 10px;white-space:normal;line-height:1.2;touch-action:manipulation}
+    .prt-designer-overlay .prt-cad-tools .prt-btn{min-height:46px}
+    .prt-cad-dimensions{grid-column:1/-1;grid-template-columns:repeat(2,minmax(0,1fr));min-width:0;overflow:visible}
+    .prt-cad-dimensions .prt-select{grid-column:1/-1;min-height:44px}
+    .prt-cad-dimensions .prt-input{min-height:44px;font-size:16px}
+    .prt-sketch-draft-action{width:54px;height:54px}
+    .prt-designer-overlay .prt-tool-btn{min-height:46px}
+    .prt-designer-overlay .prt-resize-handle{width:24px;height:24px}
+    .prt-designer-overlay .prt-resize-handle.nw{top:-9px;left:-9px}
+    .prt-designer-overlay .prt-resize-handle.ne{top:-9px;right:-9px}
+    .prt-designer-overlay .prt-resize-handle.sw{bottom:-9px;left:-9px}
+    .prt-designer-overlay .prt-resize-handle.se{bottom:-9px;right:-9px}
+    .prt-designer-overlay .prt-rotation-handle{width:22px;height:22px;left:calc(50% - 11px);top:-34px}
+  }
+  @media(max-width:480px){
+    .prt-cad-dock{max-height:46dvh}
+    .prt-cad-tools{max-height:40dvh}
+  }
   @media(max-width:768px){.prt-toolbar-main{box-sizing:border-box;width:calc(100% - 5px);min-width:0;padding:5px;gap:4px;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));grid-template-areas:"back tools spacer pdf" "page page zoom zoom"}.prt-toolbar-title{display:none}.prt-back-btn{grid-area:back;justify-self:start}.prt-toolbar-toggle{grid-area:tools;justify-self:start}.prt-pdf-btn{grid-area:pdf;justify-self:end}.prt-page-box{grid-area:page;width:100%;min-width:0;justify-content:flex-start}.prt-page-box>.prt-zoom-label{display:none}.prt-page-box .prt-select{width:auto!important;flex:1;min-width:50px}.prt-page-box .prt-btn{padding:6px 7px}.prt-zoom-box{grid-area:zoom;justify-content:flex-end;gap:3px;padding:3px 4px;min-width:0}.prt-page-box{grid-area:page}.prt-designer-canvas-area{padding:4px}.prt-toolbar-tools:not(.collapsed){position:absolute;top:0;bottom:0;left:0;width:min(220px,82vw);flex-basis:min(220px,82vw);box-shadow:var(--prt-shadow-lg)}.prt-props-panel.expanded{width:min(320px,88vw)}.prt-selection-bar{padding:8px;gap:6px}.prt-selection-bar-info{font-size:12px}.prt-selection-confirm,.prt-selection-cancel,.prt-selection-toolbtn{width:40px;height:40px}}
   @media(max-width:480px){.prt-designer-toolbar{flex-shrink:0}.prt-toolbar-main{box-sizing:border-box;width:100%;min-width:0;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));grid-template-areas:"back tools spacer pdf" "page page zoom zoom";justify-content:stretch;overflow:visible}.prt-back-btn{grid-area:back}.prt-toolbar-toggle{grid-area:tools}.prt-pdf-btn{grid-area:pdf}.prt-page-box{grid-area:page;width:100%;min-width:0;justify-content:flex-start}.prt-page-box .prt-zoom-label{min-width:auto}.prt-page-box .prt-select{width:auto!important;flex:1;min-width:50px}.prt-page-box .prt-btn{padding:6px 7px}.prt-zoom-box{gap:3px;padding:3px 4px;flex-shrink:0;grid-area:zoom;justify-content:flex-end}.prt-page-box{grid-area:page}.prt-zoom-label{min-width:42px;font-size:11px}.prt-toolbar-tools:not(.collapsed){width:min(220px,82vw);flex-basis:min(220px,82vw)}.prt-tool-btn{min-height:40px;font-size:11px}.prt-tool-btn svg{width:16px;height:16px}.prt-cad-dock{bottom:6px;width:calc(100% - 12px)}.prt-cad-tools{max-height:30dvh;gap:4px;padding:6px}.prt-cad-tools .prt-btn{min-height:38px}.prt-cad-dimensions{min-width:560px;overflow-x:auto}.prt-layer-manager{max-width:calc(100vw - 16px)}}
   @media(max-width:480px){.prt-toolbar-main{width:calc(100% - 5px)}.prt-cad-dimensions{grid-template-columns:repeat(2,minmax(0,1fr));min-width:0;overflow:visible}.prt-cad-dimensions .prt-select{grid-column:1/-1}}
@@ -603,7 +632,7 @@
                 const length = Projection.distance(nodes[0],nodes[1]);
                 const label = poly.hiddenDimensions?.includes(key) ? null : poly.dimensionLabels?.[key] ?? UNITS.formatLength(length, options.lengthUnit);
                 if(label!==null)svg += this._renderDimension([tx(nodes[0][0]),ty(nodes[0][1])],[tx(nodes[1][0]),ty(nodes[1][1])],label,centroid,placed,options,key,poly.dimensionOffsets?.[key],idx);
-                if(options.showDimensionNodes&&label!==null)svg+=this._renderDimensionNodes([tx(nodes[0][0]),ty(nodes[0][1])],[tx(nodes[1][0]),ty(nodes[1][1])],key,idx);
+                if(options.showDimensionNodes&&label!==null)svg+=this._renderDimensionNodes([tx(nodes[0][0]),ty(nodes[0][1])],[tx(nodes[1][0]),ty(nodes[1][1])],key,idx,options.handleHitRadius,options.handleVisibleRadius);
               }
             });
           }
@@ -618,7 +647,7 @@
               if (poly.hiddenDimensions?.includes(labelKey)) continue;
               const label = poly.dimensionLabels?.[labelKey] ?? UNITS.formatLength(distM, options.lengthUnit);
               svg += this._renderDimension([tx(nodes[0][0]),ty(nodes[0][1])], [tx(nodes[1][0]),ty(nodes[1][1])], label, centroid, placed, options, labelKey, poly.dimensionOffsets?.[labelKey],idx);
-              if(options.showDimensionNodes)svg+=this._renderDimensionNodes([tx(nodes[0][0]),ty(nodes[0][1])],[tx(nodes[1][0]),ty(nodes[1][1])],labelKey,idx);
+              if(options.showDimensionNodes)svg+=this._renderDimensionNodes([tx(nodes[0][0]),ty(nodes[0][1])],[tx(nodes[1][0]),ty(nodes[1][1])],labelKey,idx,options.handleHitRadius,options.handleVisibleRadius);
             }
           }
 
@@ -631,7 +660,7 @@
               const length=Projection.distance(nodes[0],nodes[1]);
               const label=dimension.label??poly.dimensionLabels?.[key]??UNITS.formatLength(length,options.lengthUnit);
               svg+=this._renderDimension([tx(nodes[0][0]),ty(nodes[0][1])],[tx(nodes[1][0]),ty(nodes[1][1])],label,centroid,placed,options,key,poly.dimensionOffsets?.[key],idx);
-              if(options.showDimensionNodes)svg+=this._renderDimensionNodes([tx(nodes[0][0]),ty(nodes[0][1])],[tx(nodes[1][0]),ty(nodes[1][1])],key,idx);
+              if(options.showDimensionNodes)svg+=this._renderDimensionNodes([tx(nodes[0][0]),ty(nodes[0][1])],[tx(nodes[1][0]),ty(nodes[1][1])],key,idx,options.handleHitRadius,options.handleVisibleRadius);
             });
           }
 
@@ -757,9 +786,10 @@
       return dimSvg;
     }
 
-    _renderDimensionNodes(p1,p2,key,polygonIndex) {
+    _renderDimensionNodes(p1,p2,key,polygonIndex,hitRadius=40,visibleRadius=7) {
       const attr=`data-prt-dimension-key="${Utils.escapeXml(key)}" data-prt-polygon="${polygonIndex}"`;
-      return `<circle class="prt-dimension-node" data-prt-dimension-node="a" ${attr} cx="${p1[0].toFixed(1)}" cy="${p1[1].toFixed(1)}" r="4"/><circle class="prt-dimension-node" data-prt-dimension-node="b" ${attr} cx="${p2[0].toFixed(1)}" cy="${p2[1].toFixed(1)}" r="4"/>`;
+      const handle=(point,node)=>`<circle class="prt-dimension-node-hit" data-prt-dimension-node="${node}" ${attr} cx="${point[0].toFixed(1)}" cy="${point[1].toFixed(1)}" r="4" stroke-width="${hitRadius*2}"/><circle class="prt-dimension-node" data-prt-dimension-node="${node}" ${attr} cx="${point[0].toFixed(1)}" cy="${point[1].toFixed(1)}" r="${visibleRadius}" pointer-events="none"/>`;
+      return handle(p1,'a')+handle(p2,'b');
     }
 
     _scaleBar(x, y, scale, unit) {
@@ -824,9 +854,10 @@
       this.sketchEditMode = null;
       this.vertexEditElementId = null;
       this.sketchDraft = null;
+      this._touchInteractionActive = false;
       this.snapEnabled = true;
       this._regenTimers = new WeakMap();
-      this.cadToggleBtn = null; this.cadToolsPanel = null; this.propsRailBtn = null;
+      this.cadToggleBtn = null; this.cadToolsPanel = null; this.cadDraftActions = null; this.propsRailBtn = null;
       this.cadEdgeSelect = null; this.cadDimensionLabel = null; this.cadDimensionLength = null;
       this.cadEdgeSignature = '';
       this.propsExpanded = false; this.cadExpanded = false;
@@ -842,7 +873,8 @@
         docMouseMove: (e) => this._canvasMouseMove(e),
         docMouseUp: () => this._handlePointerUp(),
         docTouchMove: (e) => this._canvasTouchMove(e),
-        docTouchEnd: () => this._handlePointerUp()
+        docTouchEnd: () => { this._handlePointerUp(); this._touchInteractionActive=false; },
+        docTouchCancel: () => { this._handlePointerUp(); this._touchInteractionActive=false; }
       };
     }
 
@@ -897,6 +929,7 @@
       document.addEventListener('mouseup', this._bound.docMouseUp);
       document.addEventListener('touchmove', this._bound.docTouchMove, { passive: false });
       document.addEventListener('touchend', this._bound.docTouchEnd);
+      document.addEventListener('touchcancel', this._bound.docTouchCancel);
 
       if (window.innerWidth < 768) {
         this.toolsCollapsed = true;
@@ -915,6 +948,7 @@
       document.removeEventListener('mouseup', this._bound.docMouseUp);
       document.removeEventListener('touchmove', this._bound.docTouchMove);
       document.removeEventListener('touchend', this._bound.docTouchEnd);
+      document.removeEventListener('touchcancel', this._bound.docTouchCancel);
       if (this.canvasArea) {
         this.canvasArea.removeEventListener('wheel', this._bound.wheel);
         this.canvasArea.removeEventListener('touchstart', this._bound.touchStart);
@@ -1070,6 +1104,7 @@
         ['Edit vertices','edit-vertices'],
         ['Add vertex','add-vertex'],
         ['Delete vertex','delete-vertex'],
+        ['Delete drawn feature','delete-feature'],
         ['Draw point','draw-point'],
         ['Draw line','draw-line'],
         ['Draw polygon','draw-polygon'],
@@ -1134,10 +1169,39 @@
         textContent:'Finish polygon',
         'data-cad-finish':'true',
         style:{display:'none'},
-        onClick:()=>this._finishSketchGeometry(this.sketchEditMode==='draw-line'?'LineString':'Polygon')
+        onClick:()=>this._finishSketchGeometry(
+          this.sketchEditMode==='draw-line'?'LineString':
+            this.sketchEditMode==='draw-point'?'Point':'Polygon'
+        )
       }));
       dock.appendChild(this.cadToolsPanel);
       workspace.appendChild(dock);
+      this.cadDraftActions=Utils.createElement('div',{
+        className:'prt-sketch-draft-actions',
+        hidden:true,
+        'aria-label':'Finish sketch drawing'
+      },[
+        Utils.createElement('button',{
+          className:'prt-sketch-draft-action prt-sketch-draft-cancel',
+          type:'button',
+          textContent:'×',
+          title:'Cancel drawing',
+          'aria-label':'Cancel drawing',
+          onClick:()=>this._cancelSketchDraft()
+        }),
+        Utils.createElement('button',{
+          className:'prt-sketch-draft-action prt-sketch-draft-confirm',
+          type:'button',
+          textContent:'✓',
+          title:'Finish drawing',
+          'aria-label':'Finish drawing',
+          onClick:()=>this._finishSketchGeometry(
+            this.sketchEditMode==='draw-line'?'LineString':
+              this.sketchEditMode==='draw-point'?'Point':'Polygon'
+          )
+        })
+      ]);
+      workspace.appendChild(this.cadDraftActions);
     }
 
     _activateCADMode(mode) {
@@ -1153,6 +1217,11 @@
         this._setSketchEditMode(this.sketchEditMode===mode?null:mode,el);
       }
       this._updateCADPanel();
+      if(window.innerWidth<768&&this.sketchEditMode) {
+        this.cadExpanded=false;
+        this.cadToolsPanel.classList.add('collapsed');
+        this._updatePanelButtons();
+      }
     }
 
     _updateCADPanel() {
@@ -1161,10 +1230,13 @@
         button.classList.toggle('active',button.dataset.cadMode===this.sketchEditMode);
       });
       const finish=this.cadToolsPanel.querySelector('[data-cad-finish]');
+      const canFinishDraft=!!this.sketchDraft&&['draw-line','draw-polygon','draw-point'].includes(this.sketchEditMode);
       if (finish) {
-        finish.style.display=this.sketchDraft&&this.sketchEditMode!=='draw-dimension'?'':'none';
-        finish.textContent=this.sketchEditMode==='draw-line'?'Finish line':'Finish polygon';
+        finish.style.display=canFinishDraft?'':'none';
+        finish.textContent=this.sketchEditMode==='draw-line'?'Finish line':
+          this.sketchEditMode==='draw-point'?'Finish point':'Finish polygon';
       }
+      if(this.cadDraftActions)this.cadDraftActions.hidden=!canFinishDraft;
       const snap=this.cadToolsPanel.querySelector('[data-cad-snap]');
       if (snap) {
         snap.textContent=`Snap ${this.snapEnabled?'On':'Off'}`;
@@ -1304,23 +1376,28 @@
       points.forEach((point,index)=>{const next=points[(index+1)%points.length];area+=point[0]*next[1]-next[0]*point[1];});
       if(Math.abs(area)<1e-10)return null;
       const orientation=area>0?1:-1,vertices=points.map((_,index)=>index),triangles=[];
+      const diagonalDegree=new Map();
       const inside=(p,a,b,c)=>{
         const e=1e-9;
         return cross(a,b,p)*orientation>=-e&&cross(b,c,p)*orientation>=-e&&cross(c,a,p)*orientation>=-e;
       };
       let guard=vertices.length*vertices.length;
       while(vertices.length>3&&guard-->0){
-        let clipped=false;
+        let bestEar=null;
         for(let i=0;i<vertices.length;i++){
           const prev=vertices[(i+vertices.length-1)%vertices.length],curr=vertices[i],next=vertices[(i+1)%vertices.length];
-          if(cross(points[prev],points[curr],points[next])*orientation<=1e-10)continue;
+          const triangleArea=cross(points[prev],points[curr],points[next])*orientation;
+          if(triangleArea<=1e-10)continue;
           if(vertices.some(index=>index!==prev&&index!==curr&&index!==next&&inside(points[index],points[prev],points[curr],points[next])))continue;
-          triangles.push([prev,curr,next]);
-          vertices.splice(i,1);
-          clipped=true;
-          break;
+          const degree=(diagonalDegree.get(prev)||0)+(diagonalDegree.get(next)||0);
+          const score=triangleArea/(1+degree*0.35);
+          if(!bestEar||score>bestEar.score)bestEar={position:i,prev,curr,next,score};
         }
-        if(!clipped)return null;
+        if(!bestEar)return null;
+        triangles.push([bestEar.prev,bestEar.curr,bestEar.next]);
+        diagonalDegree.set(bestEar.prev,(diagonalDegree.get(bestEar.prev)||0)+1);
+        diagonalDegree.set(bestEar.next,(diagonalDegree.get(bestEar.next)||0)+1);
+        vertices.splice(bestEar.position,1);
       }
       if(vertices.length!==3)return null;
       triangles.push(vertices.slice());
@@ -1370,7 +1447,20 @@
       copy[nodeIndex]=coordinate.slice();
       if(!poly.dimensionNodes)poly.dimensionNodes={};
       poly.dimensionNodes[key]=copy;
-      this._regenSketch(el);
+      this._moveSketchDimensionHandle(el,polygonIndex,key,nodeIndex,coordinate);
+    }
+
+    _moveSketchDimensionHandle(el,polygonIndex,key,nodeIndex,coordinate) {
+      const transform=this._getSketchTransform(el);
+      if(!transform)return;
+      const [x,y]=this._sketchCoordinateToLocal(coordinate,transform);
+      const wrapper=this.canvas.querySelector(`[data-el-id="${el.id}"]`);
+      wrapper?.querySelectorAll('[data-prt-dimension-node]').forEach(handle=>{
+        if(handle.dataset.prtDimensionKey!==key||Number(handle.dataset.prtPolygon)!==polygonIndex||
+          handle.dataset.prtDimensionNode!==(nodeIndex?'b':'a'))return;
+        handle.setAttribute('cx',String(x));
+        handle.setAttribute('cy',String(y));
+      });
     }
 
     _addManualSketchDimension(el,a,b) {
@@ -2086,14 +2176,36 @@
 
     // ---------- Canvas interactions ----------
     _canvasMouseDown(e) { const pos = this._getCanvasPos(e); this._handlePointerDown(pos, e); }
-    _canvasTouchStart(e) { if (e.touches.length!==1) return; e.preventDefault(); const pos = this._getCanvasPosTouch(e.touches[0]); this._handlePointerDown(pos, e.touches[0]); }
+    _canvasTouchStart(e) {
+      if (e.touches.length!==1) return;
+      this._touchInteractionActive=!!e.target?.closest?.('.prt-page-canvas');
+      if(this.sketchEditMode||this.activeTool)e.preventDefault();
+      const pos=this._getCanvasPosTouch(e.touches[0]);
+      this._handlePointerDown(pos,e);
+    }
     _canvasMouseMove(e) { const pos = this._getCanvasPos(e); this._handlePointerMove(pos, e); }
-    _canvasTouchMove(e) { if (e.touches.length!==1) return; e.preventDefault(); const pos = this._getCanvasPosTouch(e.touches[0]); this._handlePointerMove(pos, e.touches[0]); }
+    _canvasTouchMove(e) {
+      if(e.touches.length!==1)return;
+      const target=e.target?.closest?.('.prt-page-canvas');
+      if((!target&&!this._touchInteractionActive)||(!this.dragState&&!this.sketchEditMode&&!this.activeTool))return;
+      e.preventDefault();
+      const pos=this._getCanvasPosTouch(e.touches[0]);
+      this._handlePointerMove(pos,e.touches[0]);
+    }
 
     _handlePointerDown(pos, e) {
       const s = this.scale;
       if (this.selectedElement?.type === 'sketch' && !this.selectedElement.locked) {
         const el = this.selectedElement;
+        if(this.sketchEditMode==='delete-feature') {
+          const target=e.target?.closest?.('.prt-canvas-element');
+          if(target?.dataset.elId===el.id) {
+            e.preventDefault();
+            const coordinate=this._pageToSketchCoordinate(el,pos.x/s,pos.y/s);
+            if(coordinate)this._deleteSketchFeatureAt(el,coordinate);
+          }
+          return;
+        }
         const dimensionNode=e.target?.closest?.('[data-prt-dimension-node]');
         if(dimensionNode&&this.sketchEditMode==='edit-dimensions') {
           e.preventDefault();
@@ -2158,7 +2270,9 @@
             if (this.sketchEditMode === 'add-vertex') {
               this._addSketchVertex(el, snapped);
             } else if (this.sketchEditMode === 'draw-point') {
-              this._addSketchGeometry(el,'Point',[snapped]);
+              this.sketchDraft={element:el,points:[snapped]};
+              this._renderElement(el);
+              this._updateCADPanel();
             } else if(this.sketchEditMode==='draw-dimension') {
               if(!this.sketchDraft)this.sketchDraft={element:el,points:[snapped]};
               else this._addManualSketchDimension(el,this.sketchDraft.points[0],snapped);
@@ -2271,7 +2385,7 @@
         if (!projected) return;
         const coordinate = this.snapEnabled ? this._snapSketchCoordinate(el, projected, d) : projected;
         this._setSketchVertex(el, d.polygonIndex, d.ringIndex, d.vertexIndex, coordinate);
-        this._renderElement(el);
+        this._moveSketchVertexHandle(el,d.polygonIndex,d.ringIndex,d.vertexIndex,coordinate);
         return;
       }
       if (this.dragState.type === 'move') {
@@ -2303,11 +2417,15 @@
     }
 
     _handlePointerUp() {
+      this._touchInteractionActive=false;
       if (!this.dragState) return;
       const el = this.dragState.element;
       if (el?.type === 'sketch' && this.dragState.type === 'resize') this._regenSketch(el);
       if (el?.type === 'sketch' && this.dragState.type === 'sketch-vertex') this._commitGeometryChange(el, 'vertex-edit');
-      if (el?.type === 'sketch' && this.dragState.type === 'dimension-node') this._commitHistory('dimension-node');
+      if (el?.type === 'sketch' && this.dragState.type === 'dimension-node') {
+        this._regenSketch(el);
+        this._commitHistory('dimension-node');
+      }
       if (el?.type === 'sketch' && this.dragState.type === 'dimension') this._commitHistory('dimension-move');
       this.dragState = null;
       if (el && this.selectedElement?.id === el.id) this._showProperties(el, this.propsExpanded);
@@ -2331,6 +2449,8 @@
       const renderer = new SketchRenderer();
       const options={
         ...(el.sketchOptions||{}),
+        handleHitRadius:20/this.scale,
+        handleVisibleRadius:7/this.scale,
         showDimensionNodes:this.sketchEditMode==='edit-dimensions'&&this.selectedElement?.id===el.id
       };
       el.svgContent = renderer.render(el.polygonsRef, el.width, el.height, options);
@@ -2341,13 +2461,15 @@
       if (mode && (!el || el.type !== 'sketch')) return;
       const propertiesWasExpanded=this.propsExpanded;
       this.sketchEditMode = mode;
+      this.canvas?.classList.toggle('cad-touch-active',!!mode);
       this.vertexEditElementId = ['edit-vertices','delete-vertex'].includes(mode) ? el.id : null;
       this.sketchDraft = null;
       this.activeTool = null;
       this._regenSketch(el);
       this._showProperties(el, propertiesWasExpanded);
       this._updateCADPanel();
-      if (mode && !['edit-dimensions','draw-dimension'].includes(mode)) Utils.showToast(mode === 'draw-polygon' ? 'Tap sketch points; double-click to finish' : `${mode.replace('-', ' ')} mode`);
+      if(mode==='delete-feature')Utils.showToast('Tap a drawn point, line, or polygon to delete it');
+      else if (mode && !['edit-dimensions','draw-dimension'].includes(mode)) Utils.showToast(mode === 'draw-polygon' ? 'Tap sketch points; use the check mark to finish' : `${mode.replace('-', ' ')} mode`);
     }
 
     _getSketchTransform(el) {
@@ -2370,6 +2492,17 @@
     _sketchCoordinateToLocal(coordinate, transform) {
       return [transform.offX+(coordinate[0]-transform.minX)*transform.scale,
         transform.offY+(transform.maxY-coordinate[1])*transform.scale];
+    }
+
+    _moveSketchVertexHandle(el,polygonIndex,ringIndex,vertexIndex,coordinate) {
+      const transform=this._getSketchTransform(el);
+      if(!transform)return;
+      const [x,y]=this._sketchCoordinateToLocal(coordinate,transform);
+      const wrapper=this.canvas.querySelector(`[data-el-id="${el.id}"]`);
+      wrapper?.querySelectorAll(`[data-polygon="${polygonIndex}"][data-ring="${ringIndex}"][data-vertex="${vertexIndex}"]`).forEach(handle=>{
+        handle.setAttribute('cx',String(x));
+        handle.setAttribute('cy',String(y));
+      });
     }
 
     _pageToSketchCoordinate(el, pageX, pageY, transform = this._getSketchTransform(el)) {
@@ -2395,15 +2528,22 @@
           const count = ring.length-(isClosed?1:0);
           for (let vertexIndex=0; vertexIndex<count; vertexIndex++) {
             const [x,y] = this._sketchCoordinateToLocal(ring[vertexIndex], transform);
+            const hitTarget=document.createElementNS(ns,'circle');
+            hitTarget.setAttribute('cx',String(x));
+            hitTarget.setAttribute('cy',String(y));
+            hitTarget.setAttribute('r',String(20/this.scale));
+            hitTarget.setAttribute('class','prt-sketch-edit-hit');
+            hitTarget.setAttribute('data-prt-vertex','true');
+            hitTarget.setAttribute('data-polygon',String(polygonIndex));
+            hitTarget.setAttribute('data-ring',String(ringIndex));
+            hitTarget.setAttribute('data-vertex',String(vertexIndex));
+            svg.appendChild(hitTarget);
             const marker = document.createElementNS(ns, 'circle');
             marker.setAttribute('cx', String(x));
             marker.setAttribute('cy', String(y));
-            marker.setAttribute('r', String(6/this.scale));
+            marker.setAttribute('r', String(7/this.scale));
             marker.setAttribute('class', 'prt-sketch-edit-handle');
-            marker.setAttribute('data-prt-vertex', 'true');
-            marker.setAttribute('data-polygon', String(polygonIndex));
-            marker.setAttribute('data-ring', String(ringIndex));
-            marker.setAttribute('data-vertex', String(vertexIndex));
+            marker.setAttribute('pointer-events','none');
             svg.appendChild(marker);
           }
         });
@@ -2460,7 +2600,7 @@
     _snapSketchCoordinate(el, coordinate, except = null, excludePoint = null) {
       const transform = except?.transform || this._getSketchTransform(el);
       if (!transform || transform.scale === 0) return coordinate;
-      const tolerance=12;
+      const tolerance=window.innerWidth<768?22:12;
       let nearestVertex=null,nearestVertexDistance=tolerance;
       let nearestFeature=null,nearestFeatureDistance=tolerance;
       const consider=(point,isVertex=false)=>{
@@ -2529,10 +2669,66 @@
       this._commitGeometryChange(el, 'vertex-delete');
     }
 
+    _deleteSketchFeatureAt(el, coordinate) {
+      const polygons=el.polygonsRef||this.polygonsData||[];
+      const transform=this._getSketchTransform(el);
+      if(!transform)return;
+      const pixelScale=Math.abs(transform.scale*this.scale);
+      const tolerance=16/Math.max(pixelScale,1e-9);
+      const pointInRing=(point,ring)=>{
+        let inside=false;
+        for(let i=0,j=ring.length-1;i<ring.length;j=i++) {
+          const a=ring[i],b=ring[j];
+          if((a[1]>point[1])!==(b[1]>point[1])&&
+            point[0]<(b[0]-a[0])*(point[1]-a[1])/(b[1]-a[1])+a[0])inside=!inside;
+        }
+        return inside;
+      };
+      let candidate=null,candidateDistance=Infinity;
+      for(let polygonIndex=polygons.length-1;polygonIndex>=0;polygonIndex--) {
+        const poly=polygons[polygonIndex];
+        if(!poly?._prtDrawnFeature)continue;
+        let distance=Infinity;
+        for(const ring of poly.coordsProj||poly.coords||[]) {
+          if(!ring?.length)continue;
+          if(poly.geometryType==='Point') {
+            distance=Math.min(distance,Math.hypot(coordinate[0]-ring[0][0],coordinate[1]-ring[0][1]));
+            continue;
+          }
+          const closed=poly.geometryType!=='LineString'&&ring.length>3&&
+            ring[0][0]===ring[ring.length-1][0]&&ring[0][1]===ring[ring.length-1][1];
+          const count=ring.length-(closed?1:0);
+          const segmentCount=poly.geometryType==='LineString'?count-1:count;
+          for(let index=0;index<segmentCount;index++) {
+            const a=ring[index],b=ring[(index+1)%count],dx=b[0]-a[0],dy=b[1]-a[1];
+            const t=Math.max(0,Math.min(1,((coordinate[0]-a[0])*dx+(coordinate[1]-a[1])*dy)/(dx*dx+dy*dy||1)));
+            distance=Math.min(distance,Math.hypot(coordinate[0]-(a[0]+t*dx),coordinate[1]-(a[1]+t*dy)));
+          }
+          if(poly.geometryType!=='LineString'&&ring.length>=3&&pointInRing(coordinate,ring))distance=0;
+        }
+        if(distance<candidateDistance) {
+          candidate=poly;
+          candidateDistance=distance;
+        }
+        if(distance===0)break;
+      }
+      if(!candidate||candidateDistance>tolerance) {
+        Utils.showToast('Tap a drawn feature to delete it');
+        return;
+      }
+      for(const features of new Set([el.polygonsRef,this.polygonsData])) {
+        if(!Array.isArray(features))continue;
+        const index=features.indexOf(candidate);
+        if(index>=0)features.splice(index,1);
+      }
+      this._commitGeometryChange(el,'feature-delete');
+      Utils.showToast(`${candidate.geometryType==='Polygon'?'Polygon':candidate.geometryType==='LineString'?'Line':'Point'} deleted`);
+    }
+
     _addSketchVertex(el, coordinate) {
       const polygons = el.polygonsRef || this.polygonsData || [];
       const transform = this._getSketchTransform(el);
-      const tolerance = 14/(this.scale*Math.abs(transform?.scale||1));
+      const tolerance = 24/(this.scale*Math.abs(transform?.scale||1));
       let best = null, bestDistance = tolerance;
       polygons.forEach((poly, polygonIndex) => (poly.coordsProj || poly.coords || []).forEach((ring, ringIndex) => {
         if (poly.geometryType === 'Point') return;
@@ -2553,28 +2749,37 @@
       this._commitGeometryChange(el,'vertex-add');
     }
 
+    _cancelSketchDraft() {
+      const draft=this.sketchDraft;
+      if(!draft)return;
+      this.sketchDraft=null;
+      this._renderElement(draft.element);
+      this._updateCADPanel();
+    }
+
     _finishSketchGeometry(geometryType = 'Polygon') {
       const draft=this.sketchDraft;
-      const minimum=geometryType==='Polygon'?3:2;
-      if (!draft || draft.points.length<minimum) { this.sketchDraft=null; return Utils.showToast(`Draw at least ${minimum} ${geometryType==='Polygon'?'polygon':'line'} points`); }
+      const minimum=geometryType==='Polygon'?3:geometryType==='Point'?1:2;
+      const label=geometryType==='Polygon'?'polygon':geometryType==='Point'?'point':'line';
+      if (!draft || draft.points.length<minimum) return Utils.showToast(`Draw at least ${minimum} ${label} point${minimum===1?'':'s'}`);
       const points=draft.points.slice();
       const first=points[0], last=points[points.length-1];
-      if (Math.hypot(first[0]-last[0],first[1]-last[1])<1e-8) points.pop();
+      if (geometryType!=='Point'&&Math.hypot(first[0]-last[0],first[1]-last[1])<1e-8) points.pop();
       if (geometryType==='Polygon') {
         points.push(points[0].slice());
       }
-      if (points.length-(geometryType==='Polygon'?1:0)<minimum) {
-        this.sketchDraft=null;
+      if (geometryType!=='Point'&&points.length-(geometryType==='Polygon'?1:0)<minimum) {
         return Utils.showToast(`Draw at least ${minimum} distinct points`);
       }
       this.sketchDraft=null;
       this._addSketchGeometry(draft.element,geometryType,points);
-      Utils.showToast(`${geometryType==='Polygon'?'Polygon':'Line'} added`);
+      Utils.showToast(`${geometryType==='Polygon'?'Polygon':geometryType==='Point'?'Point':'Line'} added`);
     }
 
     _addSketchGeometry(el, geometryType, points) {
       const poly={
         geometryType,
+        _prtDrawnFeature:true,
         coordsProj:[points.map(c=>c.slice())],
         coords:[points.map(c => {
           try { return ol.proj.transform(c,CURRENT_PROJECTION,'EPSG:4326'); }
