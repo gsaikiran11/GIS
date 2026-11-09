@@ -1,5 +1,5 @@
 /* ============================================================
-   JOIN ATTRIBUTES TOOL v4.2
+   JOIN ATTRIBUTES TOOL v4.3
    Web Map Survey | QGIS2WEB | OpenLayers 10.x
 
    - Uses Web Map Survey's actual vectorLayers registry
@@ -16,7 +16,8 @@
    - Search for additional EPSG codes
    - Automatic SheetJS and Proj4js loading (CDN + local fallback)
    - Light theme and mobile-first responsive layout
-   - MANUAL FIELD PAIRING ONLY: no automatic matching
+   - Excel heading normalization (line breaks, tabs, extra spaces)
+   - Manual field pairing only; no automatic field matching
 
    Save as: join-attributes-tool.js
    ============================================================ */
@@ -24,8 +25,8 @@
 (function () {
     "use strict";
 
-    if (window.__JOIN_ATTRIBUTES_TOOL_V42__) return;
-    window.__JOIN_ATTRIBUTES_TOOL_V42__ = true;
+    if (window.__JOIN_ATTRIBUTES_TOOL_V43__) return;
+    window.__JOIN_ATTRIBUTES_TOOL_V43__ = true;
 
     const TOOL_ID = "join-attributes";
     const BUTTON_ID = "jat-join-button";
@@ -71,20 +72,11 @@
         const toast = document.createElement("div");
         toast.id = "jat-toast";
         toast.textContent = message;
-
         toast.style.cssText = `
-            position:fixed;
-            left:50%;
-            bottom:20px;
-            transform:translateX(-50%);
-            z-index:1000001;
-            max-width:92vw;
-            padding:11px 16px;
-            border-radius:9px;
+            position:fixed;left:50%;bottom:20px;transform:translateX(-50%);
+            z-index:1000001;max-width:92vw;padding:11px 16px;border-radius:9px;
             background:${type === "error" ? "#b42318" : "#24364f"};
-            color:#fff;
-            font:14px Arial,sans-serif;
-            box-shadow:0 4px 18px #0003;
+            color:#fff;font:14px Arial,sans-serif;box-shadow:0 4px 18px #0003;
         `;
 
         document.body.appendChild(toast);
@@ -201,10 +193,7 @@
 
         if (!olLib || !proj4Lib) return false;
 
-        const match = String(code).toUpperCase().match(
-            /^EPSG:(326|327)(\d{2})$/
-        );
-
+        const match = String(code).toUpperCase().match(/^EPSG:(326|327)(\d{2})$/);
         if (!match) return false;
 
         const zone = Number(match[2]);
@@ -214,7 +203,7 @@
 
         const definition =
             `+proj=utm +zone=${zone} ${south ? "+south " : ""}` +
-            `+datum=WGS84 +units=m +no_defs +type=crs`;
+            "+datum=WGS84 +units=m +no_defs +type=crs";
 
         proj4Lib.defs(code, definition);
         olLib.proj.proj4.register(proj4Lib);
@@ -225,13 +214,9 @@
     async function ensureProjection(code) {
         const olLib = getOl();
 
-        if (!olLib) {
-            throw new Error("OpenLayers is not available.");
-        }
+        if (!olLib) throw new Error("OpenLayers is not available.");
 
-        if (olLib.proj.get(code)) {
-            return olLib.proj.get(code);
-        }
+        if (olLib.proj.get(code)) return olLib.proj.get(code);
 
         // Any WGS84 UTM zone can be generated locally.
         if (/^EPSG:(326|327)\d{2}$/i.test(code)) {
@@ -263,9 +248,7 @@
         const definition = (await response.text()).trim();
 
         if (!definition || definition.startsWith("<")) {
-            throw new Error(
-                "No projection definition was returned for " + code
-            );
+            throw new Error("No projection definition was returned for " + code);
         }
 
         proj4Lib.defs(code, definition);
@@ -283,13 +266,11 @@
     /*
       IMPORTANT:
       vectorLayers is the real Web Map Survey Layer Switcher registry.
-
-      Do not enumerate map.getLayers() here. That includes temporary,
+      Do not enumerate map.getLayers() here: that includes temporary,
       helper and dummy vector layers that are not listed in the switcher.
     */
     function getVectorLayers() {
         const mapInstance = getMap();
-
         if (!mapInstance) return [];
 
         let registry = null;
@@ -319,9 +300,7 @@
 
             if (!source ||
                 typeof source.getFeatures !== "function" ||
-                typeof source.addFeatures !== "function") {
-                return;
-            }
+                typeof source.addFeatures !== "function") return;
 
             seen.add(layer);
 
@@ -358,7 +337,6 @@
         const candidates = [",", "\t", ";", "|"];
         let delimiter = ",";
         let best = -1;
-
         const firstLine = text.split(/\r?\n/)[0] || "";
 
         candidates.forEach(candidate => {
@@ -424,13 +402,11 @@
         }
 
         if (rows.length < 2) {
-            throw new Error(
-                "File needs a header row and at least one data row."
-            );
+            throw new Error("File needs a header row and at least one data row.");
         }
 
-        const headers = rows[0].map(
-            (v, i) => String(v || `Column_${i + 1}`).trim()
+        const headers = rows[0].map((v, i) =>
+            String(v || `Column_${i + 1}`).trim()
         );
 
         const data = rows.slice(1).map(values => {
@@ -446,8 +422,48 @@
         return { headers, data };
     }
 
+    // Normalize column headings once, at import time.
+    // This keeps dropdown option values and row-object property names identical.
+    // Example: "LP\nNumber", "LP\tNumber" and " LP   Number " become "LP Number".
+    function normalizeImportedHeaders(headers, rows) {
+        const originalHeaders = headers.map((header, index) =>
+            String(header ?? "")
+                .replace(/\uFEFF/g, "")
+                .replace(/[\s\u00A0]+/g, " ")
+                .trim() || `Column_${index + 1}`
+        );
+
+        // Avoid silently overwriting data if two original headings normalize
+        // to the same name (for example, "LP\nNumber" and "LP Number").
+        const used = new Map();
+
+        const normalizedHeaders = originalHeaders.map(header => {
+            const count = (used.get(header) || 0) + 1;
+            used.set(header, count);
+
+            return count === 1 ? header : `${header}_${count}`;
+        });
+
+        const data = rows.map(row => {
+            const normalizedRow = {};
+
+            headers.forEach((originalHeader, index) => {
+                normalizedRow[normalizedHeaders[index]] =
+                    row[originalHeader] ?? "";
+            });
+
+            return normalizedRow;
+        });
+
+        return {
+            headers: normalizedHeaders,
+            data
+        };
+    }
+
     async function readFile(file) {
         const extension = file.name.split(".").pop().toLowerCase();
+        let table;
 
         if (["xlsx", "xls"].includes(extension)) {
             const XLSX = await ensureSheetJS();
@@ -475,13 +491,15 @@
                 throw new Error("The worksheet is empty.");
             }
 
-            return {
+            table = {
                 headers: Object.keys(rows[0]),
                 data: rows
             };
+        } else {
+            table = parseDelimited(await file.text());
         }
 
-        return parseDelimited(await file.text());
+        return normalizeImportedHeaders(table.headers, table.data);
     }
 
     function normalizeKey(value) {
@@ -489,9 +507,7 @@
     }
 
     function makeKey(row, fields) {
-        return fields
-            .map(field => normalizeKey(row[field]))
-            .join("¦");
+        return fields.map(field => normalizeKey(row[field])).join("¦");
     }
 
     function clearResults() {
@@ -517,23 +533,14 @@
         const button = document.createElement("button");
         button.id = BUTTON_ID;
         button.type = "button";
-        button.textContent = "🔗";
+        button.textContent = "🔗 Join Attributes";
 
         button.style.cssText = `
-            position:fixed;
-            left:12px;
-            bottom:90px;
-            z-index:99990;
-            border:0;
-            border-radius:9px;
-            padding:11px 14px;
-            background:#ffffff;
-            color:#24364f;
-            border:1px solid #cbd5e1;
-            font:600 14px Arial,sans-serif;
-            cursor:pointer;
-            box-shadow:0 2px 9px #0002;
-            touch-action:manipulation;
+            position:fixed;left:12px;bottom:90px;z-index:99990;
+            border:0;border-radius:9px;padding:11px 14px;
+            background:#ffffff;color:#24364f;border:1px solid #cbd5e1;
+            font:600 14px Arial,sans-serif;cursor:pointer;
+            box-shadow:0 2px 9px #0002;touch-action:manipulation;
         `;
 
         button.addEventListener("click", openModal);
@@ -543,131 +550,69 @@
         modal.id = MODAL_ID;
 
         modal.style.cssText = `
-            display:none;
-            position:fixed;
-            inset:0;
-            z-index:999999;
-            background:#0007;
-            align-items:center;
-            justify-content:center;
-            padding:12px;
-            box-sizing:border-box;
+            display:none;position:fixed;inset:0;z-index:999999;
+            background:#0007;align-items:center;justify-content:center;
+            padding:12px;box-sizing:border-box;
         `;
 
         modal.innerHTML = `
           <div id="jat-panel" style="
-            width:min(760px,100%);
-            max-height:94vh;
-            overflow:auto;
-            background:#fff;
-            color:#1e293b;
-            border:1px solid #dbe3ec;
-            border-radius:14px;
-            box-shadow:0 12px 40px #0004;
+            width:min(760px,100%);max-height:94vh;overflow:auto;
+            background:#fff;color:#1e293b;border:1px solid #dbe3ec;
+            border-radius:14px;box-shadow:0 12px 40px #0004;
             font:14px Arial,sans-serif;
           ">
             <div id="jat-header" style="
-              position:sticky;
-              top:0;
-              background:#fff;
-              color:#1e293b;
-              padding:13px 16px;
-              display:flex;
-              align-items:center;
-              justify-content:space-between;
-              z-index:5;
+              position:sticky;top:0;background:#fff;color:#1e293b;
+              padding:13px 16px;display:flex;align-items:center;
+              justify-content:space-between;z-index:5;
               border-bottom:1px solid #e2e8f0;
             ">
               <strong style="font-size:16px">🔗 Join Attributes</strong>
-
-              <button id="jat-close"
-                type="button"
-                aria-label="Close"
-                style="
-                  border:0;
-                  background:#f1f5f9;
-                  color:#334155;
-                  font-size:23px;
-                  width:40px;
-                  height:40px;
-                  border-radius:8px;
-                  cursor:pointer
-                ">×</button>
+              <button id="jat-close" type="button" aria-label="Close" style="
+                border:0;background:#f1f5f9;color:#334155;
+                font-size:23px;width:40px;height:40px;border-radius:8px;
+                cursor:pointer
+              ">×</button>
             </div>
 
-            <div id="jat-content"
-              style="padding:14px;display:grid;gap:11px">
-
+            <div id="jat-content" style="padding:14px;display:grid;gap:11px">
               <section>
                 <label><b>1. Select layer from Layer Switcher</b></label>
-
-                <select id="jat-layer"
-                  style="width:100%;margin-top:7px"></select>
-
-                <small>
-                  Only vector layers registered in the Web Map Survey
-                  Layer Switcher are listed.
-                </small>
+                <select id="jat-layer" style="width:100%;margin-top:7px"></select>
+                <small>Only vector layers registered in the Web Map Survey Layer Switcher are listed.</small>
               </section>
 
               <section>
                 <b>2. Import CSV / TSV / Excel</b>
-
-                <input id="jat-file"
-                  type="file"
-                  accept=".csv,.tsv,.txt,.xlsx,.xls"
+                <input id="jat-file" type="file" accept=".csv,.tsv,.txt,.xlsx,.xls"
                   style="display:block;width:100%;margin-top:7px">
-
-                <div id="jat-file-info"
-                  style="margin-top:7px;color:#64748b">
-                  No table loaded.
-                </div>
+                <div id="jat-file-info" style="margin-top:7px;color:#64748b">No table loaded.</div>
               </section>
 
               <section>
                 <b>3. Configure join fields</b>
-
-                <div style="
-                  display:flex;
-                  gap:7px;
-                  flex-wrap:wrap;
-                  margin-top:8px
-                ">
-                  <button id="jat-add-pair"
-                    type="button"
-                    class="jat-btn">
-                    + Add join field
-                  </button>
+                <div style="display:flex;gap:7px;flex-wrap:wrap;margin-top:8px">
+                  <button id="jat-add-pair" type="button" class="jat-btn">+ Add join field</button>
                 </div>
-
-                <div id="jat-pairs"
-                  style="display:grid;gap:8px;margin-top:9px"></div>
-
-                <small>
-                  Use multiple pairs for a composite join key.
-                  Fields are added manually.
-                </small>
+                <div id="jat-pairs" style="display:grid;gap:8px;margin-top:9px"></div>
+                <small>Use multiple pairs for a composite join key.</small>
               </section>
 
               <section>
                 <b>4. Duplicate matching rows</b>
-
-                <select id="jat-duplicate-mode"
-                  style="width:100%;margin-top:7px">
+                <select id="jat-duplicate-mode" style="width:100%;margin-top:7px">
                   <option value="first">Use first matching row</option>
                   <option value="last">Use last matching row</option>
                   <option value="aggregate">Aggregate duplicate values</option>
                   <option value="manual">Choose matching row manually</option>
                 </select>
-
                 <div id="jat-manual" style="margin-top:8px"></div>
               </section>
 
               <section>
                 <b>5. Export CRS</b>
-
-                <select id="jat-crs"
-                  style="width:100%;margin-top:7px">
+                <select id="jat-crs" style="width:100%;margin-top:7px">
                   <option value="MAP">Same as map</option>
                   <option value="EPSG:4326">WGS 84 — EPSG:4326</option>
                   <option value="EPSG:3857">Web Mercator — EPSG:3857</option>
@@ -675,64 +620,35 @@
                   <option value="EPSG:32644">WGS 84 / UTM 44N — EPSG:32644</option>
                 </select>
 
-                <div class="jat-search-row"
-                  style="display:flex;gap:7px;margin-top:8px">
-                  <input id="jat-crs-search"
-                    type="text"
+                <div class="jat-search-row" style="display:flex;gap:7px;margin-top:8px">
+                  <input id="jat-crs-search" type="text"
                     placeholder="Search another CRS, e.g. EPSG:32645"
                     style="flex:1;min-width:0">
-
-                  <button id="jat-crs-find"
-                    type="button"
-                    class="jat-btn">
-                    Find
-                  </button>
+                  <button id="jat-crs-find" type="button" class="jat-btn">Find</button>
                 </div>
 
-                <div id="jat-crs-result"
-                  style="margin-top:7px;overflow-wrap:anywhere"></div>
+                <div id="jat-crs-result" style="margin-top:7px;overflow-wrap:anywhere"></div>
 
                 <small style="display:block;margin-top:5px">
-                  UTM WGS 84 zones can be registered offline.
-                  Other EPSG definitions may require internet.
+                  UTM WGS 84 zones can be registered offline. Other EPSG definitions may require internet.
                 </small>
 
-                <small id="jat-map-crs"
-                  style="display:block;margin-top:5px;color:#64748b"></small>
+                <small id="jat-map-crs" style="display:block;margin-top:5px;color:#64748b"></small>
               </section>
 
               <section>
                 <b>6. Join and export</b>
 
-                <div class="jat-actions"
-                  style="display:flex;gap:8px;flex-wrap:wrap;margin-top:9px">
-
-                  <button id="jat-preview"
-                    type="button"
-                    class="jat-btn">
-                    Preview join
-                  </button>
-
-                  <button id="jat-create"
-                    type="button"
-                    class="jat-btn jat-primary">
-                    Create joined layer
-                  </button>
-
-                  <button id="jat-export"
-                    type="button"
-                    class="jat-btn"
-                    disabled>
-                    Export GeoJSON
-                  </button>
+                <div class="jat-actions" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:9px">
+                  <button id="jat-preview" type="button" class="jat-btn">Preview join</button>
+                  <button id="jat-create" type="button" class="jat-btn jat-primary">Create joined layer</button>
+                  <button id="jat-export" type="button" class="jat-btn" disabled>Export GeoJSON</button>
                 </div>
 
-                <div id="jat-status"
-                  style="margin-top:10px;line-height:1.5;color:#334155"></div>
+                <div id="jat-status" style="margin-top:10px;line-height:1.5;color:#334155"></div>
               </section>
 
-              <div id="jat-preview-area"
-                style="overflow:auto;max-height:280px"></div>
+              <div id="jat-preview-area" style="overflow:auto;max-height:280px"></div>
             </div>
           </div>
         `;
@@ -743,41 +659,22 @@
         style.id = "jat-light-mobile-style";
 
         style.textContent = `
-          #jat-panel,
-          #jat-panel * {
-            box-sizing:border-box;
-          }
-
-          #jat-panel {
-            background:#fff!important;
-            color:#1e293b!important;
-          }
+          #jat-panel, #jat-panel * { box-sizing:border-box; }
+          #jat-panel { background:#fff!important;color:#1e293b!important; }
 
           #jat-panel section {
-            min-width:0;
-            padding:12px;
-            border:1px solid #e2e8f0;
-            border-radius:10px;
-            background:#fff;
+            min-width:0;padding:12px;border:1px solid #e2e8f0;
+            border-radius:10px;background:#fff;
           }
 
-          #jat-panel input,
-          #jat-panel select {
-            min-height:44px;
-            padding:10px 11px;
-            border:1px solid #cbd5e1;
-            border-radius:8px;
-            background:#fff;
-            color:#1e293b;
-            font:14px Arial,sans-serif;
-            max-width:100%;
+          #jat-panel input,#jat-panel select {
+            min-height:44px;padding:10px 11px;border:1px solid #cbd5e1;
+            border-radius:8px;background:#fff;color:#1e293b;
+            font:14px Arial,sans-serif;max-width:100%;
           }
 
-          #jat-panel input:focus,
-          #jat-panel select:focus {
-            outline:none;
-            border-color:#3982d6;
-            box-shadow:0 0 0 2px #3982d622;
+          #jat-panel input:focus,#jat-panel select:focus {
+            outline:none;border-color:#3982d6;box-shadow:0 0 0 2px #3982d622;
           }
 
           #jat-panel button {
@@ -786,24 +683,17 @@
           }
 
           #jat-panel .jat-btn {
-            border:1px solid #cbd5e1;
-            background:#f8fafc;
-            color:#263b59;
-            padding:10px 12px;
-            border-radius:8px;
-            cursor:pointer;
+            border:1px solid #cbd5e1;background:#f8fafc;color:#263b59;
+            padding:10px 12px;border-radius:8px;cursor:pointer;
             font:600 13px Arial,sans-serif;
           }
 
           #jat-panel .jat-btn:hover {
-            background:#edf4fc;
-            border-color:#94a3b8;
+            background:#edf4fc;border-color:#94a3b8;
           }
 
           #jat-panel .jat-primary {
-            background:#2563a9;
-            color:#fff;
-            border-color:#2563a9;
+            background:#2563a9;color:#fff;border-color:#2563a9;
           }
 
           #jat-panel .jat-primary:hover {
@@ -811,34 +701,20 @@
           }
 
           #jat-panel small {
-            display:block;
-            color:#64748b;
-            line-height:1.5;
-            margin-top:5px;
+            display:block;color:#64748b;line-height:1.5;margin-top:5px;
           }
 
           #jat-panel table {
-            border-collapse:collapse;
-            width:100%;
-            font-size:12px;
+            border-collapse:collapse;width:100%;font-size:12px;
           }
 
-          #jat-panel th,
-          #jat-panel td {
-            padding:8px;
-            border:1px solid #e2e8f0;
-            text-align:left;
-            white-space:nowrap;
-            max-width:190px;
-            overflow:hidden;
-            text-overflow:ellipsis;
+          #jat-panel th,#jat-panel td {
+            padding:8px;border:1px solid #e2e8f0;text-align:left;
+            white-space:nowrap;max-width:190px;overflow:hidden;text-overflow:ellipsis;
           }
 
           #jat-panel th {
-            background:#f1f5f9;
-            color:#1e293b;
-            position:sticky;
-            top:0;
+            background:#f1f5f9;color:#1e293b;position:sticky;top:0;
           }
 
           #jat-panel #jat-crs-result {
@@ -847,62 +723,39 @@
 
           @media(max-width:650px) {
             #jat-join-modal {
-              padding:0!important;
-              align-items:flex-end!important;
+              padding:0!important;align-items:flex-end!important;
             }
 
             #jat-panel {
-              width:100%!important;
-              max-width:100%!important;
-              max-height:95dvh!important;
-              height:auto;
+              width:100%!important;max-width:100%!important;
+              max-height:95dvh!important;height:auto;
               border-radius:16px 16px 0 0!important;
-              overflow-y:auto;
-              -webkit-overflow-scrolling:touch;
+              overflow-y:auto;-webkit-overflow-scrolling:touch;
               padding-bottom:env(safe-area-inset-bottom,0px);
             }
 
-            #jat-header {
-              padding:10px 13px!important;
-            }
+            #jat-header { padding:10px 13px!important; }
+            #jat-content { padding:10px!important;gap:9px!important; }
+            #jat-panel section { padding:10px; }
 
-            #jat-content {
-              padding:10px!important;
-              gap:9px!important;
-            }
-
-            #jat-panel section {
-              padding:10px;
-            }
-
-            #jat-panel input,
-            #jat-panel select {
-              min-height:46px;
-              font-size:16px;
+            #jat-panel input,#jat-panel select {
+              min-height:46px;font-size:16px;
             }
 
             #jat-panel .jat-btn {
-              min-height:44px;
-              padding:10px;
-              font-size:13px;
+              min-height:44px;padding:10px;font-size:13px;
             }
 
             #jat-pairs > div {
-              grid-template-columns:
-                minmax(0,1fr)
-                minmax(0,1fr)
-                38px!important;
+              grid-template-columns:minmax(0,1fr) minmax(0,1fr) 38px!important;
               gap:5px!important;
             }
 
             #jat-pairs select {
-              min-width:0;
-              font-size:13px!important;
+              min-width:0;font-size:13px!important;
             }
 
-            #jat-panel table {
-              font-size:11px;
-            }
+            #jat-panel table { font-size:11px; }
           }
 
           @media(max-width:380px) {
@@ -910,18 +763,14 @@
               grid-template-columns:1fr!important;
             }
 
-            #jat-pairs button {
-              width:100%;
-            }
+            #jat-pairs button { width:100%; }
 
             #jat-panel .jat-actions {
-              display:grid!important;
-              grid-template-columns:1fr 1fr;
+              display:grid!important;grid-template-columns:1fr 1fr;
             }
 
             #jat-panel #jat-create {
-              grid-column:1/-1;
-              grid-row:1;
+              grid-column:1/-1;grid-row:1;
             }
           }
         `;
@@ -937,12 +786,10 @@
         $("jat-layer").onchange = onLayerChange;
         $("jat-file").onchange = onFileChange;
         $("jat-add-pair").onclick = () => addPairRow();
-
         $("jat-duplicate-mode").onchange = updateManualUI;
         $("jat-preview").onclick = previewJoin;
         $("jat-create").onclick = createJoinedLayer;
         $("jat-export").onclick = exportGeoJSON;
-
         $("jat-crs-find").onclick = searchCRS;
 
         $("jat-crs-search").onkeydown = e => {
@@ -952,15 +799,13 @@
         refreshLayerOptions();
         refreshMapCRSLabel();
 
-        // Start with an empty pairing list.
-        // Users add only the fields they need.
+        // Start with an empty pairing list. Users add only the fields they need.
         joinPairs = [];
         renderPairRows();
     }
 
     function refreshLayerOptions() {
         const select = $("jat-layer");
-
         if (!select) return;
 
         const layers = getVectorLayers();
@@ -974,17 +819,14 @@
 
             sourceLayer = null;
             sourceFields = [];
-
             renderPairRows();
             return;
         }
 
         layers.forEach((item, index) => {
             const option = document.createElement("option");
-
             option.value = String(index);
             option.textContent = item.name;
-
             select.appendChild(option);
         });
 
@@ -1000,10 +842,7 @@
         const index = Number($("jat-layer")?.value || 0);
 
         sourceLayer = layers[index]?.layer || null;
-
-        sourceFields = sourceLayer
-            ? getFeatureFields(sourceLayer)
-            : [];
+        sourceFields = sourceLayer ? getFeatureFields(sourceLayer) : [];
 
         // Field pairs belong to the selected source layer.
         // Do not carry old pairs over.
@@ -1026,17 +865,13 @@
         mapInstance = getMap();
 
         if (!mapInstance) {
-            notify(
-                "Could not find the QGIS2Web OpenLayers map.",
-                "error"
-            );
+            notify("Could not find the QGIS2Web OpenLayers map.", "error");
             return;
         }
 
         buildUI();
 
-        // Re-read the authoritative switcher registry every time
-        // the tool opens.
+        // Re-read the authoritative switcher registry every time the tool opens.
         refreshLayerOptions();
         refreshMapCRSLabel();
 
@@ -1051,28 +886,23 @@
 
     async function onFileChange(event) {
         const file = event.target.files?.[0];
-
         if (!file) return;
 
         try {
-            $("jat-file-info").textContent =
-                "Reading " + file.name + "...";
+            $("jat-file-info").textContent = "Reading " + file.name + "...";
 
             const result = await readFile(file);
 
             importedHeaders = result.headers;
             importedRows = result.data;
-
             duplicateSelections = {};
 
-            // MANUAL PAIRING ONLY:
-            // Never auto-match or prepopulate fields after importing.
-            // The list remains empty until the user presses Add join field.
+            // Never auto-match or prepopulate fields after importing a table.
+            // The pairing list remains empty until the user presses Add join field.
             joinPairs = [];
 
             $("jat-file-info").textContent =
-                `${file.name} — ` +
-                `${importedRows.length.toLocaleString()} rows, ` +
+                `${file.name} — ${importedRows.length.toLocaleString()} rows, ` +
                 `${importedHeaders.length} columns`;
 
             renderPairRows();
@@ -1100,7 +930,6 @@
 
     function renderPairRows() {
         const container = $("jat-pairs");
-
         if (!container) return;
 
         container.innerHTML = "";
@@ -1112,14 +941,9 @@
                 ? "No join fields added. Tap + Add join field to choose the fields manually."
                 : "Import a table, then tap + Add join field to configure your join.";
 
-            empty.style.cssText = `
-                padding:10px;
-                border:1px dashed #cbd5e1;
-                border-radius:8px;
-                color:#64748b;
-                background:#f8fafc;
-                line-height:1.45;
-            `;
+            empty.style.cssText =
+                "padding:10px;border:1px dashed #cbd5e1;border-radius:8px;" +
+                "color:#64748b;background:#f8fafc;line-height:1.45";
 
             container.appendChild(empty);
             return;
@@ -1128,20 +952,16 @@
         joinPairs.forEach((pair, index) => {
             const row = document.createElement("div");
 
-            row.style.cssText = `
-                display:grid;
-                grid-template-columns:1fr 1fr auto;
-                gap:6px;
-                align-items:center;
-            `;
+            row.style.cssText =
+                "display:grid;grid-template-columns:1fr 1fr auto;" +
+                "gap:6px;align-items:center";
 
             const sourceSelect = document.createElement("select");
 
             sourceSelect.innerHTML =
                 `<option value="">Layer field</option>` +
                 sourceFields.map(field =>
-                    `<option value="${escapeHTML(field)}">` +
-                    `${escapeHTML(field)}</option>`
+                    `<option value="${escapeHTML(field)}">${escapeHTML(field)}</option>`
                 ).join("");
 
             sourceSelect.value = pair.source;
@@ -1151,8 +971,7 @@
             tableSelect.innerHTML =
                 `<option value="">Table field</option>` +
                 importedHeaders.map(field =>
-                    `<option value="${escapeHTML(field)}">` +
-                    `${escapeHTML(field)}</option>`
+                    `<option value="${escapeHTML(field)}">${escapeHTML(field)}</option>`
                 ).join("");
 
             tableSelect.value = pair.table;
@@ -1173,51 +992,34 @@
             remove.textContent = "×";
             remove.title = "Remove join field";
 
-            remove.style.cssText = `
-                border:0;
-                background:#fee2e2;
-                color:#991b1b;
-                border-radius:7px;
-                padding:7px 11px;
-                cursor:pointer;
-            `;
+            remove.style.cssText =
+                "border:0;background:#fee2e2;color:#991b1b;" +
+                "border-radius:7px;padding:7px 11px;cursor:pointer";
 
             remove.onclick = () => {
                 joinPairs.splice(index, 1);
-
                 renderPairRows();
                 clearResults();
             };
 
-            row.append(
-                sourceSelect,
-                tableSelect,
-                remove
-            );
-
+            row.append(sourceSelect, tableSelect, remove);
             container.appendChild(row);
         });
     }
 
     function getValidPairs() {
-        return joinPairs.filter(
-            pair => pair.source && pair.table
-        );
+        return joinPairs.filter(pair => pair.source && pair.table);
     }
 
     function buildLookup() {
         const pairs = getValidPairs();
 
         if (!pairs.length) {
-            throw new Error(
-                "Select at least one pair of join fields."
-            );
+            throw new Error("Select at least one pair of join fields.");
         }
 
         if (!importedRows.length) {
-            throw new Error(
-                "Import a CSV or Excel table first."
-            );
+            throw new Error("Import a CSV or Excel table first.");
         }
 
         const lookup = new Map();
@@ -1234,16 +1036,10 @@
                 lookup.set(key, []);
             }
 
-            lookup.get(key).push({
-                row,
-                index
-            });
+            lookup.get(key).push({ row, index });
         });
 
-        return {
-            pairs,
-            lookup
-        };
+        return { pairs, lookup };
     }
 
     function aggregateRows(rows) {
@@ -1254,16 +1050,12 @@
                 .map(row => String(row[field] ?? "").trim())
                 .filter(Boolean);
 
-            const numeric = values.length &&
-                values.every(value =>
-                    Number.isFinite(Number(value))
-                );
+            const numeric =
+                values.length &&
+                values.every(value => Number.isFinite(Number(value)));
 
             result[field] = numeric
-                ? values.reduce(
-                    (sum, value) => sum + Number(value),
-                    0
-                )
+                ? values.reduce((sum, value) => sum + Number(value), 0)
                 : [...new Set(values)].join(", ");
         });
 
@@ -1276,9 +1068,7 @@
         }
 
         if (mode === "aggregate") {
-            return aggregateRows(
-                matches.map(item => item.row)
-            );
+            return aggregateRows(matches.map(item => item.row));
         }
 
         if (mode === "manual") {
@@ -1294,7 +1084,6 @@
 
     function updateManualUI() {
         const area = $("jat-manual");
-
         if (!area) return;
 
         area.innerHTML = "";
@@ -1316,33 +1105,22 @@
 
             const wrapper = document.createElement("div");
 
-            wrapper.style.cssText = `
-                max-height:190px;
-                overflow:auto;
-                border:1px solid #e2e8f0;
-                border-radius:8px;
-                padding:8px;
-            `;
+            wrapper.style.cssText =
+                "max-height:190px;overflow:auto;border:1px solid #e2e8f0;" +
+                "border-radius:8px;padding:8px";
 
             duplicates.forEach(([key, matches]) => {
                 const line = document.createElement("div");
 
-                line.style.cssText = `
-                    display:grid;
-                    grid-template-columns:1fr 145px;
-                    gap:7px;
-                    padding:6px 0;
-                    border-bottom:1px solid #eee;
-                `;
+                line.style.cssText =
+                    "display:grid;grid-template-columns:1fr 145px;gap:7px;" +
+                    "padding:6px 0;border-bottom:1px solid #eee";
 
                 const label = document.createElement("span");
 
                 label.textContent = key.replace(/¦/g, " | ");
-
-                label.style.cssText = `
-                    overflow:hidden;
-                    text-overflow:ellipsis;
-                `;
+                label.style.cssText =
+                    "overflow:hidden;text-overflow:ellipsis";
 
                 const select = document.createElement("select");
 
@@ -1355,9 +1133,7 @@
                     select.appendChild(option);
                 });
 
-                select.value = String(
-                    duplicateSelections[key] ?? 0
-                );
+                select.value = String(duplicateSelections[key] ?? 0);
 
                 select.onchange = () => {
                     duplicateSelections[key] = Number(select.value);
@@ -1380,24 +1156,14 @@
         importedHeaders.forEach(field => {
             let outputField = field;
 
-            if (
-                Object.prototype.hasOwnProperty.call(
-                    result,
-                    outputField
-                )
-            ) {
+            if (Object.prototype.hasOwnProperty.call(result, outputField)) {
                 outputField = "joined_" + field;
             }
 
             const base = outputField;
             let suffix = 2;
 
-            while (
-                Object.prototype.hasOwnProperty.call(
-                    result,
-                    outputField
-                )
-            ) {
+            while (Object.prototype.hasOwnProperty.call(result, outputField)) {
                 outputField = base + "_" + suffix++;
             }
 
@@ -1415,23 +1181,13 @@
         }
 
         if (!sourceLayer) {
-            throw new Error(
-                "Select a Layer Switcher vector layer."
-            );
+            throw new Error("Select a Layer Switcher vector layer.");
         }
 
         const { pairs, lookup } = buildLookup();
-
         const mode = $("jat-duplicate-mode").value;
 
-        const sourceFieldsForKey = pairs.map(
-            pair => pair.source
-        );
-
-        const tableFieldsForKey = pairs.map(
-            pair => pair.table
-        );
-
+        const sourceFieldsForKey = pairs.map(pair => pair.source);
         const output = [];
 
         let matched = 0;
@@ -1440,11 +1196,7 @@
         sourceLayer.getSource().getFeatures().forEach(feature => {
             const properties = feature.getProperties();
 
-            const key = makeKey(
-                properties,
-                sourceFieldsForKey
-            );
-
+            const key = makeKey(properties, sourceFieldsForKey);
             const matches = lookup.get(key);
 
             const tableRow = matches?.length
@@ -1469,9 +1221,7 @@
                 ? buildJoinedProperties(properties, tableRow)
                 : { ...properties };
 
-            delete outputProperties[
-                feature.getGeometryName()
-            ];
+            delete outputProperties[feature.getGeometryName()];
 
             newFeature.setProperties(outputProperties);
 
@@ -1519,14 +1269,12 @@
               ${features.slice(0, 6).map(feature => {
                   const properties = feature.getProperties();
 
-                  return `
-                    <tr>
-                      ${fields.map(field =>
+                  return `<tr>${
+                      fields.map(field =>
                           `<td title="${escapeHTML(properties[field])}">` +
                           `${escapeHTML(properties[field])}</td>`
-                      ).join("")}
-                    </tr>
-                  `;
+                      ).join("")
+                  }</tr>`;
               }).join("")}
             </tbody>
           </table>
@@ -1544,10 +1292,8 @@
             renderPreview(joinedFeatures);
 
             $("jat-status").textContent =
-                `Preview ready. Matched: ` +
-                `${result.matched.toLocaleString()} | ` +
-                `Unmatched (retained): ` +
-                `${result.unmatched.toLocaleString()}`;
+                `Preview ready. Matched: ${result.matched.toLocaleString()} | ` +
+                `Unmatched (retained): ${result.unmatched.toLocaleString()}`;
 
             notify("Join preview created.");
         } catch (error) {
@@ -1557,7 +1303,6 @@
 
     // Register with the exact Web Map Survey layer-switcher architecture.
     function registerJoinedLayerInSwitcher(layer) {
-        // Existing importer convention: vectorLayers.push(layer).
         let registry = null;
 
         try {
@@ -1572,30 +1317,23 @@
         }
 
         if (!registry) {
-            throw new Error(
-                "Web Map Survey vectorLayers registry was not found."
-            );
+            throw new Error("Web Map Survey vectorLayers registry was not found.");
         }
 
         if (!registry.includes(layer)) {
             registry.push(layer);
         }
 
-        // The project's rebuildLayerManager clears #vector-layers
-        // and recreates rows from vectorLayers.
+        // Prefer the Layer Manager's own renderer.
         if (typeof window.rebuildLayerManager === "function") {
             window.rebuildLayerManager();
         } else {
             try {
                 if (typeof rebuildLayerManager === "function") {
                     rebuildLayerManager();
-                } else if (
-                    typeof window.addOverlayToSwitcher === "function"
-                ) {
+                } else if (typeof window.addOverlayToSwitcher === "function") {
                     window.addOverlayToSwitcher(layer);
-                } else if (
-                    typeof addOverlayToSwitcher === "function"
-                ) {
+                } else if (typeof addOverlayToSwitcher === "function") {
                     addOverlayToSwitcher(layer);
                 }
             } catch (e) {
@@ -1606,15 +1344,12 @@
             }
         }
 
-        // A second refresh accommodates manager code
-        // that schedules its own UI.
+        // A second refresh accommodates manager code that schedules its own UI.
         requestAnimationFrame(() => {
             try {
                 if (typeof window.rebuildLayerManager === "function") {
                     window.rebuildLayerManager();
-                } else if (
-                    typeof rebuildLayerManager === "function"
-                ) {
+                } else if (typeof rebuildLayerManager === "function") {
                     rebuildLayerManager();
                 }
             } catch (e) {}
@@ -1632,9 +1367,7 @@
             }
 
             if (!sourceLayer) {
-                throw new Error(
-                    "Select a Layer Switcher vector layer."
-                );
+                throw new Error("Select a Layer Switcher vector layer.");
             }
 
             const result = createJoinedFeatureObjects();
@@ -1673,22 +1406,15 @@
             $("jat-export").disabled = false;
 
             $("jat-status").textContent =
-                `Created "${name}". Features: ` +
-                `${joinedFeatures.length.toLocaleString()} | ` +
+                `Created "${name}". Features: ${joinedFeatures.length.toLocaleString()} | ` +
                 `Matched: ${result.matched.toLocaleString()} | ` +
                 `Unmatched retained: ${result.unmatched.toLocaleString()}`;
 
             renderPreview(joinedFeatures);
 
-            notify(
-                "Joined layer added to the map and Layer Switcher."
-            );
+            notify("Joined layer added to the map and Layer Switcher.");
         } catch (error) {
-            console.error(
-                "[Join Attributes] Create layer:",
-                error
-            );
-
+            console.error("[Join Attributes] Create layer:", error);
             notify(error.message || String(error), "error");
         }
     }
@@ -1715,8 +1441,7 @@
         let value = input.value.trim().toUpperCase();
 
         if (!value) {
-            result.textContent =
-                "Enter an EPSG code, e.g. EPSG:32645.";
+            result.textContent = "Enter an EPSG code, e.g. EPSG:32645.";
             return;
         }
 
@@ -1725,8 +1450,7 @@
             : "EPSG:" + value;
 
         if (!/^EPSG:\d+$/.test(code)) {
-            result.textContent =
-                "Please enter a valid EPSG code.";
+            result.textContent = "Please enter a valid EPSG code.";
             return;
         }
 
@@ -1734,7 +1458,6 @@
 
         try {
             const projection = await ensureProjection(code);
-
             const select = $("jat-crs");
 
             let option = [...select.options].find(
@@ -1743,25 +1466,20 @@
 
             if (!option) {
                 option = document.createElement("option");
-
                 option.value = code;
-
                 option.textContent =
-                    code + " — " +
-                    (projection.getUnits?.() || "CRS");
+                    code + " — " + (projection.getUnits?.() || "CRS");
 
                 select.appendChild(option);
             }
 
             select.value = code;
 
-            result.textContent =
-                code + " is available and selected.";
+            result.textContent = code + " is available and selected.";
 
             notify("CRS added: " + code);
         } catch (error) {
-            result.textContent =
-                error.message || String(error);
+            result.textContent = error.message || String(error);
         }
     }
 
@@ -1769,12 +1487,10 @@
         const url = URL.createObjectURL(blob);
 
         const link = document.createElement("a");
-
         link.href = url;
         link.download = filename;
 
         document.body.appendChild(link);
-
         link.click();
         link.remove();
 
@@ -1792,29 +1508,21 @@
             const olLib = getOl();
             const mapProjection = getMapProjection();
 
-            $("jat-status").textContent =
-                "Preparing GeoJSON export...";
+            $("jat-status").textContent = "Preparing GeoJSON export...";
 
-            const targetProjection =
-                await getExportProjection();
+            const targetProjection = await getExportProjection();
 
             const format = new olLib.format.GeoJSON();
 
-            const geojson = format.writeFeatures(
-                joinedFeatures,
-                {
-                    featureProjection: mapProjection,
-                    dataProjection: targetProjection,
-                    decimals: 8
-                }
-            );
+            const geojson = format.writeFeatures(joinedFeatures, {
+                featureProjection: mapProjection,
+                dataProjection: targetProjection,
+                decimals: 8
+            });
 
-            const blob = new Blob(
-                [geojson],
-                {
-                    type: "application/geo+json;charset=utf-8"
-                }
-            );
+            const blob = new Blob([geojson], {
+                type: "application/geo+json;charset=utf-8"
+            });
 
             const sourceName =
                 sourceLayer?.get("title") ||
@@ -1835,10 +1543,7 @@
                         types: [{
                             description: "GeoJSON",
                             accept: {
-                                "application/geo+json": [
-                                    ".geojson",
-                                    ".json"
-                                ]
+                                "application/geo+json": [".geojson", ".json"]
                             }
                         }]
                     });
@@ -1847,10 +1552,10 @@
 
                     await writable.write(blob);
                     await writable.close();
+
                 } catch (error) {
                     if (error.name === "AbortError") {
-                        $("jat-status").textContent =
-                            "Export cancelled.";
+                        $("jat-status").textContent = "Export cancelled.";
                         return;
                     }
 
@@ -1865,10 +1570,9 @@
                 getProjectionCode(targetProjection) + ".";
 
             notify("GeoJSON export completed.");
-        } catch (error) {
-            $("jat-status").textContent =
-                error.message || String(error);
 
+        } catch (error) {
+            $("jat-status").textContent = error.message || String(error);
             notify(error.message || String(error), "error");
         }
     }
@@ -1913,8 +1617,8 @@
         registerTool();
 
         console.log(
-            "[Join Attributes] v4.2 initialized; manual field pairing; " +
-            "using vectorLayers switcher registry."
+            "[Join Attributes] v4.3 initialized; manual field pairing; " +
+            "normalized import headers; using vectorLayers switcher registry."
         );
     }
 
