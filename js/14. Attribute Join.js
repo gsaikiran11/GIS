@@ -74,7 +74,7 @@
         toast.textContent = message;
         toast.style.cssText = `
             position:fixed;left:50%;bottom:20px;transform:translateX(-50%);
-            z-index:1000001;max-width:92vw;padding:11px 16px;border-radius:9px;
+            z-index:10000;max-width:92vw;padding:11px 16px;border-radius:9px;
             background:${type === "error" ? "#b42318" : "#24364f"};
             color:#fff;font:14px Arial,sans-serif;box-shadow:0 4px 18px #0003;
         `;
@@ -533,10 +533,10 @@
         const button = document.createElement("button");
         button.id = BUTTON_ID;
         button.type = "button";
-        button.textContent = "🔗 Join Attributes";
+        button.textContent = "🔗";
 
         button.style.cssText = `
-            position:fixed;left:12px;bottom:90px;z-index:99990;
+            position:fixed;left:12px;bottom:90px;z-index:9999;
             border:0;border-radius:9px;padding:11px 14px;
             background:#ffffff;color:#24364f;border:1px solid #cbd5e1;
             font:600 14px Arial,sans-serif;cursor:pointer;
